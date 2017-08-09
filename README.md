@@ -77,7 +77,7 @@ SimTemplater — это инструмент, который позволяет 
 
 ```php
 <?php
-require_once(Sim.php");
+require_once("Sim.php");
 
 //Создаем объект шаблонизатора
 $sim = new \SimTemplate\Sim();
