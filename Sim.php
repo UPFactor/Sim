@@ -1,8 +1,11 @@
 <?php
+/**
+ * @author Ivan Miroshin <ivanmiroshin@gmail.com>
+ * @copyright 2017-2018 Ivan Miroshin
+ */
+
 namespace SimTemplate;
-
-define('SIM_TEMPLATE_VERSION', '2.4.2');
-
+define('SIM_TEMPLATE_VERSION', '2.5.4');
 Procedure::autoload_register();
 
 /**
@@ -11,9 +14,25 @@ Procedure::autoload_register();
  */
 class Sim {
 
-    protected $_root_url = '';
-    protected $_root_path = '';
-    protected $_cache_path = '';
+    /**
+     * @var string Корневая директория среды исполнения скрипта (по умолчанию $_SERVER['DOCUMENT_ROOT'])
+     */
+    protected $_document_root;
+
+    /**
+     * @var string Корневой URL модификации относительных ссылок в обсолютные внутри шаблона
+     */
+    protected $_root_url;
+
+    /**
+     * @var string Путь до корневой дирректории с шаблонами
+     */
+    protected $_root_path;
+
+    /**
+     * @var string Путь до директории размещения файлов кеша
+     */
+    protected $_cache_path;
 
     /**
      * @var Macros коллекция макросов
@@ -45,12 +64,158 @@ class Sim {
      * @param array $configuration
      */
     function __construct(array $configuration = array()){
+
+        //Запуск метрики для отслеживания процесса выполнения шаблонизации
         $this->metrics = (new Metrics())->start();
-        $this->_root_path = $_SERVER['DOCUMENT_ROOT'];
-        $this->_cache_path = __DIR__ . '/sim-cache/';
+
+        //Установка значений по умолчанию
+        $this->_document_root = Procedure::get_document_root();
+        $this->_root_url = '';
+        $this->_root_path = $this->_document_root;
+        $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'sim-cache';
+
+        //Создания объекта управления данными
         $this->data = new Data();
+
+        //Создания объекта управления макросами
         $this->macros = new Macros(array(), $this->metrics);
+
+        //Установка конфигураций шаблонизации
         $this->setConfiguration($configuration);
+    }
+
+    /**
+     * Устанавливает параметры шаблонизатора. Принимает массив значений
+     *  • RootURL — Корень для автозамены относительных ссылок используемых в шаблоне
+     *  • RootPath — Полный путь до дирректории с шаблонами
+     *  • CachePath — Полный путь до дирректории для хранения кеш-файлов
+     *
+     * @param array $configuration
+     * @return $this
+     * @throws Exception
+     */
+    public function setConfiguration(array $configuration = array()){
+        if (empty($configuration)) return $this;
+
+        if (!empty($configuration['RootURL'])) $this->setRootURL($configuration['RootURL']);
+        if (!empty($configuration['RootPath'])) $this->setRootPath($configuration['RootPath']);
+        if (!empty($configuration['CachePath']))$this->setCachePath($configuration['CachePath']);
+
+        return $this;
+    }
+
+    /**
+     * Возвращает массив конфигураций шаблонизатора
+     *  • RootURL — Корень для автозамены относительных ссылок используемых в шаблоне
+     *  • RootPath — Полный путь до дирректории с шаблонами
+     *  • CachePath — Полный путь до дирректории для хранения кеш-файлов
+     *
+     * @return array
+     */
+    public function getConfiguration(){
+        $arResult = array();
+        $arResult['RootURL'] = $this->getRootURL();
+        $arResult['RootPath'] = $this->getRootPath();
+        $arResult['CachePath'] = $this->getCachePath();
+        return $arResult;
+    }
+
+    /**
+     * Задает корень для модификации относительных ссылок в обсолютные внутри шаблона
+     * Выполняет преобразование для всей ссылок внутри шаблона по принципу:
+     *  • <img src="img.jpg" /> → <img src="[http://domen.com/subdir/]img.jpg" />
+     *  • <img src="img.jpg" /> → <img src="[/domen/subdir/]img.jpg" />
+     *
+     * Где [http://domen.com/subdir/] или [/domen/subdir/] является заданным корнем.
+     *
+     * @param string $url
+     * @return Sim
+     * @throws Exception
+     */
+    public function setRootURL($url){
+        $url = trim($url);
+        try{
+            if (!preg_match('/^(?:(?:http|https):\/\/|\.?\/|\/\/)(?:[A-Z0-9][A-Z0-9_-]*(?:.[A-Z0-9][A-Z0-9_-]*)+):?(d+)?\/$/is', $url)) {
+                throw new Exception("Invalid root URL — $url ");
+            }
+        } catch (Exception $e) {
+            $e->showError();
+        }
+        $this->_root_url = $url;
+        $this->macros->setDefaultRootURL($url);
+        return $this;
+    }
+
+    /**
+     * Возвращает текущее значение RootURL
+     *
+     * @return string
+     */
+    public function getRootURL(){
+        return $this->_root_url;
+    }
+
+    /**
+     * Устанавливает путь до корнивой директории с шаблонами.
+     * Если указан данные параметр то путь к шаблону необходимо задавать относительно него.
+     *
+     * @param string $path
+     * @return $this
+     * @throws Exception
+     */
+    public function setRootPath($path){
+        try{
+            $path = File::realpath($path);
+        } catch (Exception $e) {
+            $e->showError();
+        }
+        $this->_root_path = $path;
+        $this->macros->setDefaultRootPath($path);
+        return $this;
+    }
+
+    /**
+     * Возвращает текущее значение RootPath
+     *
+     * @return string
+     */
+    public function getRootPath(){
+        return $this->_root_path;
+    }
+
+    /**
+     * Устанавливает путь до дирректории хранения кеш файлов
+     *
+     * @param string $cache_path Полный путь до дирректории хранения кеш файлов
+     */
+    public function setCachePath($cache_path){
+        try{
+            //Валидация пути
+            if (!preg_match('/^(?:(?:[a-z]{1}\:\\'.DIRECTORY_SEPARATOR.')|\\'.DIRECTORY_SEPARATOR.')(?:[a-z0-9_\-\\'.DIRECTORY_SEPARATOR.'\. ]{0,220})$/is', $cache_path)) {
+                throw new Exception("Invalid cache path — $cache_path ");
+            }
+
+            //Удаление повторяющихся разделительных символов директории
+            $cache_path = str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,$cache_path);
+
+            //Исключения разделительного символа директорий с конца строки
+            if (substr($cache_path, -1) == DIRECTORY_SEPARATOR){
+                $cache_path = substr($cache_path, 0, -1);
+            }
+        } catch (Exception $e) {
+            $e->showError();
+        }
+        $this->_cache_path = $cache_path;
+        $this->macros->setDefaultCachePath($cache_path);
+    }
+
+    /**
+     * Возвращает дирректорию хранения кеш-файлов
+     *
+     * @return string
+     */
+    public function getCachePath(){
+        return $this->_cache_path;
     }
 
     /**
@@ -59,10 +224,10 @@ class Sim {
      * пользовательскими настройками
      */
     protected function checkCachePath(){
-        if (empty($this->_cache_path)){
-            $this->_cache_path = $this->_cache_path = __DIR__ . '/sim-cache/';
-        }
         try{
+            if (empty($this->_cache_path)){
+                $this->_cache_path = $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'sim-cache';
+            }
             if (!file_exists($this->_cache_path)){
                 if(!mkdir($this->_cache_path, 0777, true)) throw new Exception("Error creating cache path — $this->_cache_path ");
             }
@@ -86,7 +251,7 @@ class Sim {
         $cache_path = (empty($cache_path)) ? $this->_cache_path : $cache_path;
         try{
             if (file_exists($cache_path)){
-                $files = glob($cache_path."*.sim*", GLOB_BRACE);
+                $files = glob($cache_path.DIRECTORY_SEPARATOR."*.sim*", GLOB_BRACE);
                 foreach($files as $file) unlink($file);
             }
         } catch (Exception $e) {
@@ -119,132 +284,6 @@ class Sim {
     }
 
     /**
-     * Задает корень для создания обсолютных ссылок внутри шаблона.
-     * Выполняет преобразование для всей ссылок внутри шаблона по принципу <img src="img.jpg" />, <img src="[http://domen.com/subdir/]img.jpg" />.
-     * Где [http://domen.com/subdir/] является заданным корневым URL
-     *
-     * @param string $url
-     * @return $this
-     * @throws Exception
-     */
-    public function setRootURL($url){
-        $url = trim($url);
-        try{
-            if (!preg_match('/^(?:(?:http|https):\/\/|\.?\/|\/\/)(?:[A-Z0-9][A-Z0-9_-]*(?:.[A-Z0-9][A-Z0-9_-]*)+):?(d+)?\/$/is', $url)) throw new Exception("Invalid root URL — $url ");
-        } catch (Exception $e) {
-            $e->showError();
-        }
-        $this->_root_url = $url;
-        $this->macros->setDefaultRootURL($url);
-        return $this;
-    }
-
-    /**
-     * Возвращает текущее значение RootURL
-     *
-     * @return string
-     */
-    public function getRootURL(){
-        return $this->_root_url;
-    }
-
-    /**
-     * Устанавливает путь до корнивой директории с шаблонами.
-     * Если указан данные параметр то путь к шаблону необходимо задавать относительно него.
-     *
-     * @param string $path
-     * @return $this
-     * @throws Exception
-     */
-    public function setRootPath($path){
-        try{
-            $path = File::realpath($path);
-        } catch (Exception $e) {
-            $e->showError();
-        }
-
-        $this->_root_path = $path;
-        $this->macros->setDefaultRootPath($path);
-        return $this;
-    }
-
-    /**
-     * Возвращает текущее значение RootPath
-     *
-     * @return string
-     */
-    public function getRootPath(){
-        return $this->_root_path;
-    }
-
-    /**
-     * Устанавливает путь до дирректории хранения кеш файлов
-     *
-     * @param string $cache_path Полный путь до дирректории хранения кеш файлов
-     */
-    public function setCachePath($cache_path){
-        try{
-            if (!preg_match('/^[\/\.][a-z0-9_\-\/\. ]{0,220}$/is', $cache_path)) throw new Exception("Invalid cache path — $cache_path ");
-        } catch (Exception $e) {
-            $e->showError();
-        }
-        $this->_cache_path = $cache_path;
-        $this->macros->setDefaultCachePath($cache_path);
-    }
-
-    /**
-     * Возвращает дирректорию хранения кеш-файлов
-     *
-     * @return string
-     */
-    public function getCachePath(){
-        return $this->_cache_path;
-    }
-
-    /**
-     * Устанавливает параметры шаблонизатора. Принимает массив значений
-     *  • RootURL — Корень для автозамены относительных ссылок используемых в шаблоне
-     *  • RootPath — Полный путь до дирректории с шаблонами
-     *  • CachePath — Полный путь до дирректории для хранения кеш-файлов
-     *
-     * @param array $configuration
-     * @return $this
-     * @throws Exception
-     */
-    public function setConfiguration(array $configuration = array()){
-        if (empty($configuration)) return $this;
-
-        if (!empty($configuration['RootURL'])) {
-            $this->setRootURL($configuration['RootURL']);
-
-        }
-        if (!empty($configuration['RootPath'])) {
-            $this->setRootPath($configuration['RootPath']);
-        }
-        if (!empty($configuration['CachePath'])) {
-            $this->setCachePath($configuration['CachePath']);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Возвращает массив конфигураций шаблонизатора
-     *  • RootURL — Корень для автозамены относительных ссылок используемых в шаблоне
-     *  • RootPath — Полный путь до дирректории с шаблонами
-     *  • CachePath — Полный путь до дирректории для хранения кеш-файлов
-     *
-     * @return array
-     */
-    public function getConfiguration(){
-        $arResult = array();
-        $arResult['RootURL'] = $this->getRootURL();
-        $arResult['RootPath'] = $this->getRootPath();
-        $arResult['CachePath'] = $this->getCachePath();
-        return $arResult;
-    }
-
-    /**
      * Нормализует все ссылки шаблона (link, script, img, style url) отсносительно корневого URL
      *
      * @param string $template HTML код шаблона
@@ -263,19 +302,6 @@ class Sim {
     }
 
     /**
-     * Нормализует пути до шаблонов. Сверяет переданный путь с корневым путем.
-     * Если пути не имеют перечений возвращает конструкцию — [root path][path]
-     *
-     * @param string $path
-     * @return string
-     */
-    protected function pathNormaliz($path){
-        if (empty($this->_root_path)) return File::realpath($path);
-        if (preg_match('/^' . preg_quote($this->_root_path, '/') . '/is', $path)) return File::realpath($path);
-        return File::realpath($this->_root_path.'/'.$path);
-    }
-
-    /**
      * Возвращает хеш шаблона.
      * Формирование хеша зависит от способа как был задан шаблон (путь до файла или исходник шаблона).
      * Возвращает массив:
@@ -284,17 +310,20 @@ class Sim {
      *
      * @param string $template Адрес или исходных код шаблона, для которого необходимо сформировать хеш
      * @return array
-     * @throws Exception
      */
     protected function getTemplateHash($template){
-        if (preg_match('/^[\/\.]?[a-z0-9_\-\/\. ]{0,215}\.[a-z]{1,8}$/is', $template)) {
-            $template_path = $this->pathNormaliz($template);
-            $template_hash = sha1_file($template_path);
+        if (preg_match('/^(?:[a-z0-9_\-\\'.DIRECTORY_SEPARATOR.'\. ]{0,220})(?:\.[a-z0-9_\-]{1,8})$/is', $template)) {
+            if (empty($this->_root_path) or preg_match('/^' . preg_quote($this->_root_path, '/') . '/is', $template)){
+                $template_file = File::realpath($template);
+            } else {
+                $template_file = File::realpath($this->_root_path.DIRECTORY_SEPARATOR.$template);
+            }
+            $template_hash = sha1_file($template_file);
         } else {
-            $template_path = false;
+            $template_file = false;
             $template_hash = sha1($template);
         }
-        return array('hash'=>$template_hash.SIM_TEMPLATE_VERSION, 'path'=>$template_path);
+        return array('hash'=>$template_hash.SIM_TEMPLATE_VERSION, 'file'=>$template_file);
     }
 
     /**
@@ -309,7 +338,7 @@ class Sim {
      */
     public function compile($template){
 
-        //Стартуем метрику выполнения
+        //Старт метрики выполнения
         if ($this->_debug === true) $metric_id = $this->metrics->begin('compile');
 
         $result = array(
@@ -324,30 +353,30 @@ class Sim {
             if (empty($template)) throw new Exception("No incoming template source");
 
             //Проверяем существует ли дирректория кеширования, указанная в параметрах шаблонизатора.
-            //Если дирректории нет, или ее невозможно создать вернет критическую ошибку
+            //Если дирректории нет и ее невозможно создать вернет критическую ошибку
             $this->checkCachePath();
 
             //Формируем хеш шаблона и путь до шаблона
             $_template_hash = $this->getTemplateHash($template);
             $template_hash = $_template_hash['hash'];
-            $template_path = $_template_hash['path']; //может принимать значние false, если шаблон передан в виде исходника
+            $template_file = $_template_hash['file']; //может принимать значние false, если шаблон передан в виде исходника
             unset($_template_hash);
 
-            if ($template_path) {
+            if ($template_file) {
                 //Сохраняем информацию о шаблоне для вывода при формировании ошибки
-                $result['path'] = $template_path;
+                $result['path'] = $template_file;
                 //Генерируем ошибку если файл шаблона не найден
-                if (!file_exists($template_path)) throw new Exception("Unable to find real path of template '$template_path'");
+                if (!file_exists($template_file)) throw new Exception("Unable to find real path of template '$template_file'");
             }
 
             //Устанавливаем root_url относительно пути к шаблону, если не задан иной
-            if (!empty($template_path) and empty($this->_root_url)){
-                $this->_root_url = '/'.str_replace($_SERVER['DOCUMENT_ROOT'], '', pathinfo($template_path)['dirname']).'/';
+            if (!empty($template_file) and empty($this->_root_url)){
+                $this->_root_url = str_replace($this->_document_root, '', dirname($template_file)).'/';
                 $this->macros->setDefaultRootURL($this->_root_url, false);
             }
 
             //Проверяем существование файла кеша по $template_hash
-            $template_cache = File::exists($this->_cache_path . $template_hash . '.simcache');
+            $template_cache = File::exists($this->_cache_path.DIRECTORY_SEPARATOR.$template_hash . '.simcache');
 
             //Если кеша нет, то выполняем индексацию и генерацию шаблона
             if ($template_cache !== false){
@@ -364,7 +393,7 @@ class Sim {
                 if ($this->_debug === true) $this->metrics->params('Cache', 'no');
 
                 //Получаем содержание шаблона
-                $template_source = ($template_path) ? (new File($template_path))->content() : $template;
+                $template_source = ($template_file) ? (new File($template_file))->content() : $template;
 
                 //Переопределяем все ссылки шаблона с учетом корневой дирректории
                 $template_source = $this->linksNormaliz($template_source);
@@ -404,7 +433,7 @@ class Sim {
     /**
      * Выполняет компиляцию и рендеринг шаблона с учетом установленных настроек шаблонизатора.
      *
-     * @param $template — Исходный код шаблона или путь до файла шаблона относительно директории заданной в параметре «setRootPath»
+     * @param string $template — Исходный код шаблона или путь до файла шаблона относительно директории заданной в параметре «setRootPath»
      * @param array $data — Данные шаблонизации (необязательный). Переданный массив данных будет объединен с текущими данными шаблона.
      * @param bool $revert — Если установлено «true», то вывод шаблона на клиенте будет заблокирован, а метод execute вернет строку (string) с скомпилированным кодом шаблона
      * @return Sim|string
@@ -518,7 +547,7 @@ class Sim {
      * Упращенная конструкция функции «execute».
      * Выполняет компиляцию и рендеринг шаблона с учетом установленных настроек шаблонизатора
      *
-     * @param $template — Исходный код шаблона или путь до файла шаблона относительно директории заданной в параметре «setRootPath»
+     * @param string $template Исходный код шаблона или путь до файла шаблона относительно директории заданной в параметре «setRootPath»
      * @return Sim
      */
     public function render($template){
@@ -586,7 +615,7 @@ class Metrics {
      * Открывает новую секцию метрики, для отдельного учета
      * времени и используемой памяти.
      *
-     * @param $description — Описание секции
+     * @param string $description Описание секции
      * @return int — ID секции метрики
      */
     public function begin($description){
@@ -605,7 +634,7 @@ class Metrics {
     /**
      * Завершает учет секции с заданным ID.
      *
-     * @param $metric_id — ID секции метрики
+     * @param string $metric_id ID секции метрики
      * @return Metrics
      */
     public function end($metric_id){
@@ -639,8 +668,8 @@ class Metrics {
         $data['metric'] = $this->get();
         $data['sim'] = __DIR__.'/Sim.php';
         $data = json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
-        $link = '/'.str_replace($_SERVER['DOCUMENT_ROOT'], '',__DIR__);
-        echo '<form action="' . $link . '/sim-tools/metric.php" method="post" target="_blank"><button type="submit" name="data" value=\''.$data.'\'>Open metric</button> </form>';
+        $link = str_replace(Procedure::get_document_root(), '',__DIR__).'/sim-tools/metric.php';
+        echo '<form action="'.$link.'" method="post" target="_blank"><button type="submit" name="data" value=\''.$data.'\'>Open metric</button> </form>';
     }
 }
 
@@ -1210,7 +1239,7 @@ class Macro{
         $sim->macros->add($this->_name, $this->_template_source);
         if ($this->debug === true) $sim->onDebug(true);
 
-        //Выполняем шаблонизацию макросаclass="h2"
+        //Выполняем шаблонизацию макроса
         $result = $sim->execute($this->_template_source, $data, true);
 
         //Объединяем метрики
@@ -1390,6 +1419,7 @@ class Index{
         return $arMacros;
     }
 
+
     /**
      * Выполняет парсинг шаблона, заполняет коллекцию индекса
      *
@@ -1399,18 +1429,51 @@ class Index{
      */
     private function parsing($template, $main_iteration=true){
 
+        //Поиск DOM-элементов с установленной семантикой шаблонизатора
+        $template_ = $template;
+        $blocks = array();
+
+        //Предварительный поиск DOM-элементов, отвечающих как однострочному, так и блочному представлению
+        while (preg_match('/<\s*(?!\/)([a-z]+)[^>]*data-sim\s*=\s*\"(.*?)\"[^>]*>/is', $template_, $dom_string, PREG_OFFSET_CAPTURE)){
+
+            //Обработка блочных DOM-элементов
+            if (preg_match('/<\s*([a-z0-9]+)\b[^\>]*\bdata-sim\s*=\s*\"([^\"]+)\"[^\>]*>(?>([^\<]+|<(?!\/?\s*\1\b))|(<\s*\1[^\>]*>(?:(?3)|(?4)|)+?<\/\s*\1\s*>))*<\/\s*\1\s*>/ix', $template_, $dom_block, PREG_OFFSET_CAPTURE, $dom_string[0][1])){
+
+                $blocks[] = array(
+                    'node' => $dom_block[0][0],
+                    'tag' => $dom_block[1][0],
+                    'commands' => $dom_block[2][0],
+                );
+
+                $template_ = Procedure::str_replace_once($dom_block[0][0],'', $template_);
+
+            } else {
+
+                //Если найденный DOM-элемент не отвечает блочному предоставлению, то он считается элементом
+                //с однострочным представлением
+                $blocks[] = array(
+                    'node' => $dom_string[0][0],
+                    'tag' => $dom_string[1][0],
+                    'commands' => $dom_string[2][0],
+                );
+
+                $template_ = Procedure::str_replace_once($dom_string[0][0],'', $template_);
+
+            }
+        }
+        unset($template_);
+
         $arIndexID = array();
 
-        //Выполняем поиск DOM-элементов с установленной семантикой шаблонизатора
-        if (preg_match_all('/<\s*([a-z0-9]+)\b[^\>]*\bdata-sim\s*=\s*\"([^\"]+)\"[^\>]*>(?>([^\<]+|<(?!\/?\s*\1\b))|(<\s*\1[^\>]*>(?:(?3)|(?4)|)+?<\/\s*\1\s*>))*<\/\s*\1\s*>/ix', $template, $blocks)){
-
-            foreach ($blocks[0] as $k=>$block_node){
+        //Создание/компиляция индекса для найденных элементов DOM с симантикой шаблонизатора
+        if (!empty($blocks)){
+            foreach($blocks as $block){
 
                 //Устанавливаем параметры элемента индекса
                 $arItemParameters = array(
                     'index_id' => $this->indexRegistration(),
-                    'tag' => $blocks[1][$k],
-                    'commands' => $blocks[2][$k]
+                    'tag' => $block['tag'],
+                    'commands' => $block['commands']
                 );
 
                 //Собираем в массив все элементы индекса текущей интерации. (Будут использованны
@@ -1418,67 +1481,31 @@ class Index{
                 $arIndexID[] = $arItemParameters['index_id'];
 
                 //Удаляем из DOM-элемента симантику шаблонизатора
-                $block_node_ = preg_replace('/^\s*(<[^>]*)(data-sim\s*=\s*\"[^\"]+\"\s*)([^>]*>)/is','$1$3',$block_node);
+                $block_node = preg_replace('/^\s*(<[^>]*)(data-sim\s*=\s*\"[^\"]+\"\s*)([^>]*>)/is','$1$3',$block['node']);
 
                 //Выполняем парсинг дочерних DOM элементов
-                $arParseResult = $this->parsing($block_node_, false);
+                $arParseResult = $this->parsing($block_node, false);
                 $arItemParameters['node'] = $arParseResult['template'];
                 $arItemParameters['nested'] = $arParseResult['index'];
 
                 //Создаем элемент индекса
                 $index_item = $this->add($arItemParameters);
-
-                unset($arItemParameters,$block_node_);
+                unset($arItemParameters,$block_node);
 
                 //Если это первая итерация рекурсивной функции, то выполняем компиляцию
                 //В последующих рекурсиях элементы будут зависимы от родительских, поэтому их компиляция не возможна
                 if ($main_iteration){
                     $this->compileElementIndex($index_item);
-                    $template = Procedure::str_replace_once($block_node, $index_item->get('node')->getNode(), $template);
-                    //Иначе заменяем заменяем используемый сигмент на метку (ключ) индекса
+                    $template = Procedure::str_replace_once($block['node'], $index_item->get('node')->getNode(), $template);
                 } else {
-                    $template = Procedure::str_replace_once($block_node, $index_item->get('index_key'), $template);
-                }
-
-            }
-        }
-
-        //Выполняем поиск однострочных DOM-элементов с установленной семантикой шаблонизатора
-        if (preg_match_all('/<\s*(?!\/)([a-z]+)[^>]*data-sim\s*=\s*\"(.*?)\"[^>]*\/>/isu', $template, $blocks)){
-            foreach ($blocks[0] as $k=>$block_node){
-
-                //Регистрируем номер индекса
-                $index_id = $this->indexRegistration();
-
-                //Собираем в массив все элементы индекса текущей интерации. (Будут использованны
-                //как список зависимости в рекурсии метода)
-                $arIndexID[] = $index_id;
-
-                //Устанавливаем параметры элемента индекса
-                //Создаем элемент индекса
-                $index_item = $this->add(array(
-                    'index_id' => $index_id,
-                    'tag' => $blocks[1][$k],
-                    'node' => preg_replace('/^\s*(<.*?)(data-sim\s*=\s*\".*?\"\s*)(.*?>)/is','$1$3',$block_node),
-                    'commands' => $blocks[2][$k]
-                ));
-
-                //Если это первая итерация рекурсивной функции, то выполняем компиляцию
-                if ($main_iteration){
-                    $this->compileElementIndex($index_item);
-                    $template = Procedure::str_replace_once($block_node, $index_item->get('node')->getNode(), $template);
                     //Иначе заменяем заменяем используемый сигмент на метку (ключ) индекса
-                } else {
-                    $template = Procedure::str_replace_once($block_node, $index_item->get('index_key'),$template);
+                    $template = Procedure::str_replace_once($block['node'], $index_item->get('index_key'), $template);
                 }
-
-                unset($index_item);
             }
         }
 
         return array ('template' => $template, 'index' => $arIndexID);
     }
-
     /**
      * Выполняеет индексацию и компиляцию шаблона в php-код
      *
@@ -1526,7 +1553,7 @@ class Index{
         //Установка кода для инициализации макроса из шаблона (кеша)
         $macro_code = '';
         foreach ($arMacros as $macro_item){
-            $macro_code.= '$template[\'object\']->macros->add(\''.$macro_item['name'].'\', \''.str_replace('\'','\\\'',$macro_item['content']).'\');';
+            $macro_code.= '$template[\'object\']->macros->add(\''.$macro_item['name'].'\', \''.str_replace('\'','\\\'',$macro_item['content']).'\', array(\'RootURL\'=>\'\', \'RootPath\'=>\'\'));';
         }
         if (!empty($macro_code)) $macro_code = '<? '.$macro_code.' ?>';
 
@@ -1640,7 +1667,7 @@ class Index{
     /**
      * Компиляция комманд элемента индекса
      *
-     * @param $command — Команда
+     * @param string $command Команда
      * @param IndexItem $index_item — Объект элемента индекса к которому принадлежит команда
      * @param bool $condition — Условие выполнения команды
      * @throws Exception
@@ -2388,10 +2415,10 @@ trait NodeAttributesTrait {
     }
 
     /**
-     * Возвращает элемент из коллекции по ID
+     * Возвращает массив свойств элемента из коллекции по ID
      *
      * @param string|integer $element_id
-     * @return string
+     * @return array
      * @throws Exception
      */
     function get($element_id){
@@ -3055,7 +3082,11 @@ class filter_abs extends Filter {
  */
 class filter_capitalize extends Filter {
     public function initialize($var, array $params = array()){
-        return 'ucfirst('.$var.')';
+        return '\\'.__NAMESPACE__.'\filter_capitalize::get('.$var.')';
+    }
+
+    public static function get($string){
+        return mb_strtoupper(mb_substr($string, 0, 1)) . mb_substr(mb_strtolower($string), 1, mb_strlen($string) - 1);
     }
 }
 
@@ -3065,7 +3096,7 @@ class filter_capitalize extends Filter {
  */
 class filter_lower extends Filter {
     public function initialize($var, array $params = array()){
-        return 'strtolower('.$var.')';
+        return 'mb_strtolower('.$var.')';
     }
 }
 
@@ -3075,7 +3106,7 @@ class filter_lower extends Filter {
  */
 class filter_upper extends Filter {
     public function initialize($var, array $params = array()){
-        return 'strtoupper('.$var.')';
+        return 'mb_strtoupper('.$var.')';
     }
 }
 
@@ -4463,7 +4494,7 @@ class File {
     /**
      * Возвращает содержание файла
      *
-     * @param $filename — Путь к файлу
+     * @param string $filename Путь к файлу
      * @return string
      * @throws Exception
      */
@@ -4501,8 +4532,8 @@ class File {
         if (!file_exists($path)){
             if (mkdir($path,0777,true) === false) throw new Exception("Error creating directory  '$path' ");
         }
-        if (file_put_contents($path.$filename, $data) === false) throw new Exception("Error creating file '$filename' ");
-        return new File($path.$filename);
+        if (file_put_contents($path.DIRECTORY_SEPARATOR.$filename, $data) === false) throw new Exception("Error creating file '$filename' ");
+        return new File($path.DIRECTORY_SEPARATOR.$filename);
     }
 
     /**
@@ -4579,6 +4610,17 @@ class File {
  * @package SimTemplate
  */
 class Procedure {
+
+    final static public function get_document_root(){
+        $result = false;
+        try {
+            if (empty($_SERVER['DOCUMENT_ROOT'])) throw new Exception('Variable $_SERVER[\'DOCUMENT_ROOT\'] is empty');
+            if (!($result = realpath($_SERVER['DOCUMENT_ROOT']))) throw new Exception('Directory from variable $_SERVER[\'DOCUMENT_ROOT\'] not found');
+        } catch (Exception $e) {
+            $e->showError();
+        }
+        return $result;
+    }
 
     /**
      * Проверяет, содержатся ли все элементы из массива ключей в родительском массиве (в случае успеха вернет true)
