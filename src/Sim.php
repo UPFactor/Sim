@@ -21,6 +21,11 @@ Procedure::autoload_register();
 class Environment {
 
     /**
+     * @var bool переключатель сервисного режима для отладки
+     */
+    private $_debug = false;
+
+    /**
      * @var string Корневая директория среды исполнения скрипта (по умолчанию $_SERVER['DOCUMENT_ROOT'])
      */
     protected $_document_root;
@@ -53,11 +58,6 @@ class Environment {
      * @var Metrics объект для формирования метрики выполнения скрипта
      */
     protected $metrics;
-
-    /**
-     * @var bool переключатель сервисного режима для отладки
-     */
-    private $_debug=false;
 
     /**
      * Environment constructor.
