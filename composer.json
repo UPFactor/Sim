@@ -25,8 +25,14 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Sim\\Providers\\Laravel\\SimServiceProvider"
-            ]
+                "Sim\\Adapters\\Laravel\\SimServiceProvider"
+            ],
+            "aliases": {
+                "Sim": "Sim\\Adapters\\Laravel\\SimFacade"
+            }
+        },
+        "branch-alias": {
+            "dev-master": "3.x-dev"
         }
     }
 }

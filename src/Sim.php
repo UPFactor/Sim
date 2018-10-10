@@ -6,12 +6,16 @@
 
 namespace Sim;
 
-define('SIM_VERSION', '3.0.0');
+define('VERSION', '3.0.0');
 
 Procedure::autoload_register();
 
 /**
  * Class Environment
+ *
+ * @property Macros $macros
+ * @property Data $data
+ * @property Metrics $metrics
  * @package Sim
  */
 class Environment {
@@ -39,16 +43,16 @@ class Environment {
     /**
      * @var Macros коллекция макросов
      */
-    public $macros;
+    protected $macros;
     /**
      * @var Data объект управления данными
      */
-    public $data;
+    protected $data;
 
     /**
      * @var Metrics объект для формирования метрики выполнения скрипта
      */
-    public $metrics;
+    protected $metrics;
 
     /**
      * @var bool переключатель сервисного режима для отладки
@@ -74,7 +78,7 @@ class Environment {
         $this->_document_root = Procedure::get_document_root();
         $this->_root_url = '';
         $this->_root_path = $this->_document_root;
-        $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'cache';
+        $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'Cache';
 
         //Создания объекта управления данными
         $this->data = new Data();
@@ -84,6 +88,21 @@ class Environment {
 
         //Установка конфигураций шаблонизации
         $this->setConfiguration($configuration);
+    }
+
+    /**
+     * Установка геттеров для свойств объекта: 'macros','data','metrics'
+     *
+     * @param $property
+     * @return Macros|Data|Metrics
+     * @throws Exception
+     */
+    function __get($property){
+        if (in_array($property,array('macros','data','metrics'))){
+            return $this->{$property};
+        } else {
+            throw new Exception($property . " property not found in object " . self::class);
+        }
     }
 
     /**
@@ -325,7 +344,7 @@ class Environment {
             $template_file = false;
             $template_hash = sha1($template);
         }
-        return array('hash'=>$template_hash.SIM_VERSION, 'file'=>$template_file);
+        return array('hash'=>$template_hash.VERSION, 'file'=>$template_file);
     }
 
     /**
@@ -4140,7 +4159,7 @@ class Execute_resource extends Code{
         if (empty($cache_path)) $cache_time = 0;
 
         if ($cache_time > 0) {
-            $cache_id = sha1($resource.serialize($params).(($revert_vars) ? '_vars' : '')).SIM_VERSION;
+            $cache_id = sha1($resource.serialize($params).(($revert_vars) ? '_vars' : '')).VERSION;
             $cache = File::exists($cache_path . $cache_id . '.simdata');
         }
 
