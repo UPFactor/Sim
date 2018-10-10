@@ -16,5 +16,17 @@
             "email": "ivanmiroshin@gmail.com"
         }
     ],
-    "minimum-stability": "stable"
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "Sim\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Sim\\Providers\\Laravel\\SimServiceProvider"
+            ]
+        }
+    }
 }

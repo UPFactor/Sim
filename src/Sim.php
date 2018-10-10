@@ -228,7 +228,7 @@ class Environment {
     protected function checkCachePath(){
         try{
             if (empty($this->_cache_path)){
-                $this->_cache_path = $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'cache';
+                $this->_cache_path = $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'Cache';
             }
             if (!file_exists($this->_cache_path)){
                 if(!mkdir($this->_cache_path, 0777, true)) throw new Exception("Error creating cache path — $this->_cache_path ");
@@ -670,7 +670,7 @@ class Metrics {
         $data['metric'] = $this->get();
         $data['sim'] = __DIR__.'/Sim.php';
         $data = json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
-        $link = str_replace(Procedure::get_document_root(), '',__DIR__).'/tools/metric.php';
+        $link = str_replace(Procedure::get_document_root(), '',__DIR__).'/Tools/metric.php';
         echo '<form action="'.$link.'" method="post" target="_blank"><button type="submit" name="data" value=\''.$data.'\'>Open metric</button> </form>';
     }
 }
@@ -4681,7 +4681,7 @@ class Procedure {
      */
     final public static function autoload($class) {
         $class = str_replace(__NAMESPACE__.'\\', '', $class);
-        $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'extension' . DIRECTORY_SEPARATOR . $class . '.sim.php';
+        $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Extension' . DIRECTORY_SEPARATOR . $class . '.php';
         @include_once $path;
     }
 
