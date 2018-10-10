@@ -1,5 +1,5 @@
 {
-    "name": "sim/sim",
+    "name": "upfactor/sim",
     "type": "library",
     "description": "Template language for PHP",
     "keywords": ["templating"],
