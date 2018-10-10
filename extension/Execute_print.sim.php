@@ -1,7 +1,7 @@
 <?php
-namespace SimTemplate;
+namespace Sim;
 
-class execute_print extends Code{
+class Execute_print extends Code{
 
     //Переменная будет содержать исходное
     //представление переданного выражения

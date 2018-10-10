@@ -1,7 +1,7 @@
 <?php
-namespace SimTemplate;
+namespace Sim;
 
-class filter_replace extends Filter{
+class Filter_replace extends Filter{
 
     //Формируем функцию—обработчик для фильтра
     public static function replace($needle, $replace, $subject){
@@ -14,6 +14,6 @@ class filter_replace extends Filter{
     //Инициализируем обработчик
     public function initialize($var = '', array $params){
         //Возвращаем php-код с вызовом функции обработчика
-        return '\\'.__NAMESPACE__.'\filter_replace::replace('.$params[0].', '.$params[1].', '.$var.')';
+        return '\\'.__NAMESPACE__.'\Filter_replace::replace('.$params[0].', '.$params[1].', '.$var.')';
     }
 }

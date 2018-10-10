@@ -4,15 +4,17 @@
  * @copyright 2017-2018 Ivan Miroshin
  */
 
-namespace SimTemplate;
-define('SIM_TEMPLATE_VERSION', '2.5.4');
+namespace Sim;
+
+define('SIM_VERSION', '3.0.0');
+
 Procedure::autoload_register();
 
 /**
- * Class Sim
- * @package SimTemplate
+ * Class Environment
+ * @package Sim
  */
-class Sim {
+class Environment {
 
     /**
      * @var string Корневая директория среды исполнения скрипта (по умолчанию $_SERVER['DOCUMENT_ROOT'])
@@ -54,7 +56,7 @@ class Sim {
     private $_debug=false;
 
     /**
-     * Sim constructor.
+     * Environment constructor.
      *
      * Устанавливает параметры шаблонизатора. Принимает массив значений
      *  • RootURL — Корень для автозамены относительных ссылок используемых в шаблоне
@@ -72,7 +74,7 @@ class Sim {
         $this->_document_root = Procedure::get_document_root();
         $this->_root_url = '';
         $this->_root_path = $this->_document_root;
-        $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'sim-cache';
+        $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'cache';
 
         //Создания объекта управления данными
         $this->data = new Data();
@@ -129,7 +131,7 @@ class Sim {
      * Где [http://domen.com/subdir/] или [/domen/subdir/] является заданным корнем.
      *
      * @param string $url
-     * @return Sim
+     * @return Environment
      * @throws Exception
      */
     public function setRootURL($url){
@@ -226,7 +228,7 @@ class Sim {
     protected function checkCachePath(){
         try{
             if (empty($this->_cache_path)){
-                $this->_cache_path = $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'sim-cache';
+                $this->_cache_path = $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'cache';
             }
             if (!file_exists($this->_cache_path)){
                 if(!mkdir($this->_cache_path, 0777, true)) throw new Exception("Error creating cache path — $this->_cache_path ");
@@ -323,7 +325,7 @@ class Sim {
             $template_file = false;
             $template_hash = sha1($template);
         }
-        return array('hash'=>$template_hash.SIM_TEMPLATE_VERSION, 'file'=>$template_file);
+        return array('hash'=>$template_hash.SIM_VERSION, 'file'=>$template_file);
     }
 
     /**
@@ -436,7 +438,7 @@ class Sim {
      * @param string $template — Исходный код шаблона или путь до файла шаблона относительно директории заданной в параметре «setRootPath»
      * @param array $data — Данные шаблонизации (необязательный). Переданный массив данных будет объединен с текущими данными шаблона.
      * @param bool $revert — Если установлено «true», то вывод шаблона на клиенте будет заблокирован, а метод execute вернет строку (string) с скомпилированным кодом шаблона
-     * @return Sim|string
+     * @return Environment|string
      */
     public function execute($template, array $data = array(), $revert = false){
 
@@ -472,7 +474,7 @@ class Sim {
                  *  • path — путь к файлу с шаблоном. Может принимать значние false, если шаблон передан в виде исходника
                  *  • cache — true, если шаблон востановлен из кеша, иначе false
                  *  • cache_file — путь до кеш-файла шаблона
-                 *  • object — объект шаблонизатора (class Sim)
+                 *  • object — объект шаблонизатора (class Environment)
                  */
 
                 $template['root_url'] = $template['object']->getRootURL();
@@ -548,7 +550,7 @@ class Sim {
      * Выполняет компиляцию и рендеринг шаблона с учетом установленных настроек шаблонизатора
      *
      * @param string $template Исходный код шаблона или путь до файла шаблона относительно директории заданной в параметре «setRootPath»
-     * @return Sim
+     * @return Environment
      */
     public function render($template){
         $this->execute($template);
@@ -560,7 +562,7 @@ class Sim {
  * Управление метрикой выполнения скрипта
  *
  * Class Metrics
- * @package SimTemplate
+ * @package Sim
  */
 class Metrics {
 
@@ -668,14 +670,14 @@ class Metrics {
         $data['metric'] = $this->get();
         $data['sim'] = __DIR__.'/Sim.php';
         $data = json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
-        $link = str_replace(Procedure::get_document_root(), '',__DIR__).'/sim-tools/metric.php';
+        $link = str_replace(Procedure::get_document_root(), '',__DIR__).'/tools/metric.php';
         echo '<form action="'.$link.'" method="post" target="_blank"><button type="submit" name="data" value=\''.$data.'\'>Open metric</button> </form>';
     }
 }
 
 /**
  * Class DataTrait
- * @package SimTemplate
+ * @package Sim
  */
 trait DataTrait {
     protected $_data = array();
@@ -725,7 +727,7 @@ trait DataTrait {
  *
  * Class Data
  * @property array $_block — Коллекция блоков
- * @package SimTemplate
+ * @package Sim
  */
 class Data{
     use DataTrait;
@@ -790,7 +792,7 @@ class Data{
  * Управление данными блока
  *
  * Class DataBlock
- * @package SimTemplate
+ * @package Sim
  */
 class DataBlock{
     use DataTrait;
@@ -800,7 +802,7 @@ class DataBlock{
  * Управление коллекцией макросов
  *
  * Class Macros
- * @package SimTemplate
+ * @package Sim
  */
 class Macros{
 
@@ -1086,7 +1088,7 @@ class Macros{
  * Макрос
  *
  * Class Macro
- * @package SimTemplate
+ * @package Sim
  */
 class Macro{
 
@@ -1235,7 +1237,7 @@ class Macro{
     public function execute(array $data=array()){
 
         //Создаем объект шаблонизатора
-        $sim = new Sim($this->_configuration);
+        $sim = new Environment($this->_configuration);
         $sim->macros->add($this->_name, $this->_template_source);
         if ($this->debug === true) $sim->onDebug(true);
 
@@ -1255,7 +1257,7 @@ class Macro{
  * Управление индексацией шаблона
  *
  * Class Index
- * @package SimTemplate
+ * @package Sim
  */
 class Index{
 
@@ -1684,7 +1686,7 @@ class Index{
             $command_name = $matches[1];
 
             //Проверка наличия обработчика для команды
-            $class_name = '\\'.__NAMESPACE__.'\execute_'.$command_name;
+            $class_name = '\\'.__NAMESPACE__.'\Execute_'.$command_name;
             if (!class_exists($class_name)) throw new Exception("Method '$command_name' is not found ");
 
             //Логируем информацию о процессе выполнения команды
@@ -1716,7 +1718,7 @@ class Index{
  * Элемент индекса
  *
  * Class IndexItem
- * @package SimTemplate
+ * @package Sim
  */
 class IndexItem {
 
@@ -1890,7 +1892,7 @@ class IndexItem {
  * Сегмент DOM-элемента
  *
  * Class Node
- * @package SimTemplate
+ * @package Sim
  */
 class Node {
 
@@ -2377,7 +2379,7 @@ class Node {
 
 /**
  * Class NodeAttributesTrait
- * @package SimTemplate
+ * @package Sim
  */
 trait NodeAttributesTrait {
 
@@ -2525,7 +2527,7 @@ trait NodeAttributesTrait {
  * Управление классами в DOM-элементе
  *
  * Class NodeClassesManager
- * @package SimTemplate
+ * @package Sim
  */
 class NodeClassesManager {
 
@@ -2587,7 +2589,7 @@ class NodeClassesManager {
  * Управление атрибутонами в DOM-элементе
  *
  * Class NodeAttributesManager
- * @package SimTemplate
+ * @package Sim
  */
 class NodeAttributesManager {
 
@@ -2663,11 +2665,11 @@ class NodeAttributesManager {
  * Управление модификаторами (фильтрами)
  *
  * Class FilterManager
- * @package SimTemplate
+ * @package Sim
  */
 class FilterManager{
     static final function getFilter($filter){
-        $filter_name = '\\'.__NAMESPACE__.'\filter_'.$filter;
+        $filter_name = '\\'.__NAMESPACE__.'\Filter_'.$filter;
         if (!class_exists($filter_name)) throw new Exception("Filter '$filter' is not found ");
         return new $filter_name();
     }
@@ -2677,17 +2679,17 @@ class FilterManager{
  * Проттотип модификатора (фильтра)
  *
  * Class Filter
- * @package SimTemplate
+ * @package Sim
  */
 abstract class Filter{
     abstract public function initialize($var, array $params);
 }
 
 /**
- * Class filter_escape
- * @package SimTemplate
+ * Class Filter_escape
+ * @package Sim
  */
-class filter_escape extends Filter {
+class Filter_escape extends Filter {
 
     public function initialize($var, array $params = array()){
         $var = '(string) '.$var;
@@ -2697,32 +2699,32 @@ class filter_escape extends Filter {
 }
 
 /**
- * Class filter_e
- * @package SimTemplate
+ * Class Filter_e
+ * @package Sim
  */
-class filter_e extends filter_escape {}
+class Filter_e extends Filter_escape {}
 
 /**
- * Class filter_json_encode
- * @package SimTemplate
+ * Class Filter_json_encode
+ * @package Sim
  */
-class filter_json_encode extends Filter {
+class Filter_json_encode extends Filter {
     public function initialize($var, array $params = array()){
         return 'json_encode('.$var.', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE)';
     }
 }
 
 /**
- * Class filter_json
- * @package SimTemplate
+ * Class Filter_json
+ * @package Sim
  */
-class filter_json extends filter_json_encode {}
+class Filter_json extends Filter_json_encode {}
 
 /**
- * Class filter_json_decode
- * @package SimTemplate
+ * Class Filter_json_decode
+ * @package Sim
  */
-class filter_json_decode extends Filter {
+class Filter_json_decode extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(string) '.$var;
         return 'json_decode('.$var.', true)';
@@ -2730,10 +2732,10 @@ class filter_json_decode extends Filter {
 }
 
 /**
- * Class filter_round
- * @package SimTemplate
+ * Class Filter_round
+ * @package Sim
  */
-class filter_round extends Filter {
+class Filter_round extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(float) '.$var;
         $params[0] = (empty($params[0])) ? '0' : '(int) '.$params[0];
@@ -2749,10 +2751,10 @@ class filter_round extends Filter {
 }
 
 /**
- * Class filter_number_format
- * @package SimTemplate
+ * Class Filter_number_format
+ * @package Sim
  */
-class filter_number_format extends Filter {
+class Filter_number_format extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(float) '.$var;
         $params[0] = (empty($params[0])) ? '0' : '(int) '.$params[0];
@@ -2763,10 +2765,10 @@ class filter_number_format extends Filter {
 }
 
 /**
- * Class filter_trim
- * @package SimTemplate
+ * Class Filter_trim
+ * @package Sim
  */
-class filter_trim extends Filter {
+class Filter_trim extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(string) '.$var;
         return 'trim('.$var.')';
@@ -2774,10 +2776,10 @@ class filter_trim extends Filter {
 }
 
 /**
- * Class filter_serialize
- * @package SimTemplate
+ * Class Filter_serialize
+ * @package Sim
  */
-class filter_serialize extends Filter {
+class Filter_serialize extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(array) '.$var;
         return 'serialize('.$var.')';
@@ -2785,10 +2787,10 @@ class filter_serialize extends Filter {
 }
 
 /**
- * Class filter_unserialize
- * @package SimTemplate
+ * Class Filter_unserialize
+ * @package Sim
  */
-class filter_unserialize extends Filter {
+class Filter_unserialize extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(string) '.$var;
         return 'unserialize('.$var.')';
@@ -2796,10 +2798,10 @@ class filter_unserialize extends Filter {
 }
 
 /**
- * Class filter_join
- * @package SimTemplate
+ * Class Filter_join
+ * @package Sim
  */
-class filter_join extends Filter {
+class Filter_join extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(array) '.$var;
         $params[0] = ((!empty($params[0])) ? '(string) '.$params[0] : '\',\'');
@@ -2808,10 +2810,10 @@ class filter_join extends Filter {
 }
 
 /**
- * Class filter_split
- * @package SimTemplate
+ * Class Filter_split
+ * @package Sim
  */
-class filter_split extends Filter {
+class Filter_split extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(string) '.$var;
         $params[0] = ((!empty($params[0])) ? '(string) '.$params[0] : '\',\'');
@@ -2820,16 +2822,16 @@ class filter_split extends Filter {
 }
 
 /**
- * Class filter_batch
- * @package SimTemplate
+ * Class Filter_batch
+ * @package Sim
  */
-class filter_batch extends Filter {
+class Filter_batch extends Filter {
 
     public function initialize($var, array $params = array()){
         $var = '(array) '.$var;
         $params[0] = ((!empty($params[0])) ? '(int) '.$params[0] : '1');
         $params[1] = ((!empty($params[1])) ? '(string) '.$params[1] : '\'\'');
-        return '\\'.__NAMESPACE__.'\filter_batch::get('.$var.', '.$params[0].', '.$params[1].')';
+        return '\\'.__NAMESPACE__.'\Filter_batch::get('.$var.', '.$params[0].', '.$params[1].')';
     }
 
     public static function get(array $array=array(), $count=0, $default=''){
@@ -2858,10 +2860,10 @@ class filter_batch extends Filter {
 }
 
 /**
- * Class filter_keys
- * @package SimTemplate
+ * Class Filter_keys
+ * @package Sim
  */
-class filter_keys extends Filter {
+class Filter_keys extends Filter {
     public function initialize($var, array $params = array()){
         $var = '(array) '.$var;
         return 'array_keys('.$var.')';
@@ -2869,15 +2871,15 @@ class filter_keys extends Filter {
 }
 
 /**
- * Class filter_sort
- * @package SimTemplate
+ * Class Filter_sort
+ * @package Sim
  */
-class filter_sort extends Filter {
+class Filter_sort extends Filter {
 
     public function initialize($var, array $params = array()){
         $var = '(array) '.$var;
         $params[0] = (empty($params[0]) or $params[0] == 'asc' or $params[0] != 'desc') ? '\'asc\'' : '\'desc\'';
-        return '\\'.__NAMESPACE__.'\filter_sort::get('.$var.', '.$params[0].')';
+        return '\\'.__NAMESPACE__.'\Filter_sort::get('.$var.', '.$params[0].')';
     }
 
     public static function get(array $array = array(), $direction = 'asc'){
@@ -2893,16 +2895,16 @@ class filter_sort extends Filter {
 }
 
 /**
- * Class filter_date
- * @package SimTemplate
+ * Class Filter_date
+ * @package Sim
  */
-class filter_date extends Filter {
+class Filter_date extends Filter {
 
     public function initialize($var, array $params = array()){
         $var = '(string) '.$var;
         $params[0] = ((!empty($params[0])) ? '(string) '.$params[0] : '\'d.m.Y\'');
 
-        return '\\'.__NAMESPACE__.'\filter_date::get('.$var.', '.$params[0].')';
+        return '\\'.__NAMESPACE__.'\Filter_date::get('.$var.', '.$params[0].')';
 
     }
 
@@ -2920,30 +2922,30 @@ class filter_date extends Filter {
 }
 
 /**
- * Class filter_empty
- * @package SimTemplate
+ * Class Filter_empty
+ * @package Sim
  */
-class filter_empty extends Filter {
+class Filter_empty extends Filter {
     public function initialize($var, array $params = array()){
         return 'empty('.$var.')';
     }
 }
 
 /**
- * Class filter_count
- * @package SimTemplate
+ * Class Filter_count
+ * @package Sim
  */
-class filter_count extends Filter {
+class Filter_count extends Filter {
     public function initialize($var, array $params = array()){
         return 'count((array) '.$var.')';
     }
 }
 
 /**
- * Class filter_in_array
- * @package SimTemplate
+ * Class Filter_in_array
+ * @package Sim
  */
-class filter_in_array extends Filter {
+class Filter_in_array extends Filter {
     public function initialize($var, array $params = array()){
         $params[0] = (empty($params[0])) ? '' : $params[0];
         return 'in_array('.$params[0].', (array) '.$var.')';
@@ -2951,138 +2953,138 @@ class filter_in_array extends Filter {
 }
 
 /**
- * Class filter_is_array
- * @package SimTemplate
+ * Class Filter_is_array
+ * @package Sim
  */
-class filter_is_array extends Filter {
+class Filter_is_array extends Filter {
     public function initialize($var, array $params = array()){
         return 'is_array('.$var.')';
     }
 }
 
 /**
- * Class filter_is_string
- * @package SimTemplate
+ * Class Filter_is_string
+ * @package Sim
  */
-class filter_is_string extends Filter {
+class Filter_is_string extends Filter {
     public function initialize($var, array $params = array()){
         return 'is_string('.$var.')';
     }
 }
 
 /**
- * Class filter_is_numeric
- * @package SimTemplate
+ * Class Filter_is_numeric
+ * @package Sim
  */
-class filter_is_numeric extends Filter {
+class Filter_is_numeric extends Filter {
     public function initialize($var, array $params = array()){
         return 'is_numeric('.$var.')';
     }
 }
 
 /**
- * Class filter_is_bool
- * @package SimTemplate
+ * Class Filter_is_bool
+ * @package Sim
  */
-class filter_is_bool extends Filter {
+class Filter_is_bool extends Filter {
     public function initialize($var, array $params = array()){
         return 'is_bool('.$var.')';
     }
 }
 
 /**
- * Class filter_is_float
- * @package SimTemplate
+ * Class Filter_is_float
+ * @package Sim
  */
-class filter_is_float extends Filter {
+class Filter_is_float extends Filter {
     public function initialize($var, array $params = array()){
         return 'is_float('.$var.')';
     }
 }
 
 /**
- * Class filter_is_integer
- * @package SimTemplate
+ * Class Filter_is_integer
+ * @package Sim
  */
-class filter_is_integer extends Filter {
+class Filter_is_integer extends Filter {
     public function initialize($var, array $params = array()){
         return 'is_integer('.$var.')';
     }
 }
 
 /**
- * Class filter_is_int
- * @package SimTemplate
+ * Class Filter_is_int
+ * @package Sim
  */
-class filter_is_int extends filter_is_integer {}
+class Filter_is_int extends Filter_is_integer {}
 
 /**
- * Class filter_integer
- * @package SimTemplate
+ * Class Filter_integer
+ * @package Sim
  */
-class filter_integer extends Filter {
+class Filter_integer extends Filter {
     public function initialize($var, array $params = array()){
         return '(int) '.$var;
     }
 }
 
 /**
- * Class filter_float
- * @package SimTemplate
+ * Class Filter_float
+ * @package Sim
  */
-class filter_float extends Filter {
+class Filter_float extends Filter {
     public function initialize($var, array $params = array()){
         return '(float) '.$var;
     }
 }
 
 /**
- * Class filter_boolean
- * @package SimTemplate
+ * Class Filter_boolean
+ * @package Sim
  */
-class filter_boolean extends Filter {
+class Filter_boolean extends Filter {
     public function initialize($var, array $params = array()){
         return '(bool) '.$var;
     }
 }
 
 /**
- * Class filter_string
- * @package SimTemplate
+ * Class Filter_string
+ * @package Sim
  */
-class filter_string extends Filter {
+class Filter_string extends Filter {
     public function initialize($var, array $params = array()){
         return '(string) '.$var;
     }
 }
 
 /**
- * Class filter_array
- * @package SimTemplate
+ * Class Filter_array
+ * @package Sim
  */
-class filter_array extends Filter {
+class Filter_array extends Filter {
     public function initialize($var, array $params = array()){
         return '(array) '.$var;
     }
 }
 
 /**
- * Class filter_abs
- * @package SimTemplate
+ * Class Filter_abs
+ * @package Sim
  */
-class filter_abs extends Filter {
+class Filter_abs extends Filter {
     public function initialize($var, array $params = array()){
         return 'abs('.$var.')';
     }
 }
 
 /**
- * Class filter_capitalize
- * @package SimTemplate
+ * Class Filter_capitalize
+ * @package Sim
  */
-class filter_capitalize extends Filter {
+class Filter_capitalize extends Filter {
     public function initialize($var, array $params = array()){
-        return '\\'.__NAMESPACE__.'\filter_capitalize::get('.$var.')';
+        return '\\'.__NAMESPACE__.'\Filter_capitalize::get('.$var.')';
     }
 
     public static function get($string){
@@ -3091,60 +3093,60 @@ class filter_capitalize extends Filter {
 }
 
 /**
- * Class filter_lower
- * @package SimTemplate
+ * Class Filter_lower
+ * @package Sim
  */
-class filter_lower extends Filter {
+class Filter_lower extends Filter {
     public function initialize($var, array $params = array()){
         return 'mb_strtolower('.$var.')';
     }
 }
 
 /**
- * Class filter_upper
- * @package SimTemplate
+ * Class Filter_upper
+ * @package Sim
  */
-class filter_upper extends Filter {
+class Filter_upper extends Filter {
     public function initialize($var, array $params = array()){
         return 'mb_strtoupper('.$var.')';
     }
 }
 
 /**
- * Class filter_striptags
- * @package SimTemplate
+ * Class Filter_striptags
+ * @package Sim
  */
-class filter_striptags extends Filter {
+class Filter_striptags extends Filter {
     public function initialize($var, array $params = array()){
         return 'strip_tags('.$var.')';
     }
 }
 
 /**
- * Class filter_url_encode
- * @package SimTemplate
+ * Class Filter_url_encode
+ * @package Sim
  */
-class filter_url_encode extends Filter {
+class Filter_url_encode extends Filter {
     public function initialize($var, array $params = array()){
         return 'urlencode('.$var.')';
     }
 }
 
 /**
- * Class filter_slashes
- * @package SimTemplate
+ * Class Filter_slashes
+ * @package Sim
  */
-class filter_slashes extends Filter {
+class Filter_slashes extends Filter {
     public function initialize($var, array $params = array()){
         return 'addslashes('.$var.')';
     }
 }
 
 /**
- * Class filter_br
- * @package SimTemplate
+ * Class Filter_br
+ * @package Sim
  */
-class filter_br extends Filter {
+class Filter_br extends Filter {
     public function initialize($var, array $params = array()){
         return 'str_replace("\n", \'<br>\', '.$var.')';
 
@@ -3155,7 +3157,7 @@ class filter_br extends Filter {
  * Компиляция команд (операторов) или отдельных сигментов кода.
  *
  * Class Code
- * @package SimTemplate
+ * @package Sim
  */
 abstract class Code {
 
@@ -3458,10 +3460,10 @@ abstract class Code {
 }
 
 /**
- * Class execute_foreach
- * @package SimTemplate
+ * Class Execute_foreach
+ * @package Sim
  */
-class execute_foreach extends Code {
+class Execute_foreach extends Code {
 
     protected $_source;
     protected $_block;
@@ -3571,10 +3573,10 @@ class execute_foreach extends Code {
 }
 
 /**
- * Class execute_repeat
- * @package SimTemplate
+ * Class Execute_repeat
+ * @package Sim
  */
-class execute_repeat extends execute_foreach {
+class Execute_repeat extends Execute_foreach {
 
     protected function initialize($command){
         if (preg_match('/\s*(repeat)\s*\((.*?)\s+as\s+(\$[a-z0-9-_\.]+)(?:\s+~exception +(clear|none))?\s*\)\s*$/is',$command,$command_content)){
@@ -3643,10 +3645,10 @@ class execute_repeat extends execute_foreach {
 }
 
 /**
- * Class execute_content
- * @package SimTemplate
+ * Class Execute_content
+ * @package Sim
  */
-class execute_content extends Code{
+class Execute_content extends Code{
 
     protected $_modifier;
     protected $_value;
@@ -3658,7 +3660,7 @@ class execute_content extends Code{
             } else {
                 $value = $this->concat($command_content['2']);
                 $default_value = $this->concat($command_content['3']);
-                $this->_value = '\\'.__NAMESPACE__.'\execute_content::isEmptyThen('.$value.', '.$default_value.')';
+                $this->_value = '\\'.__NAMESPACE__.'\Execute_content::isEmptyThen('.$value.', '.$default_value.')';
             }
         } else return false;
         return true;
@@ -3702,10 +3704,10 @@ class execute_content extends Code{
 }
 
 /**
- * Class execute_if
- * @package SimTemplate
+ * Class Execute_if
+ * @package Sim
  */
-class execute_if extends Code{
+class Execute_if extends Code{
 
     protected $_condition_content;
     protected $_condition_command;
@@ -3732,10 +3734,10 @@ class execute_if extends Code{
 }
 
 /**
- * Class execute_attributes
- * @package SimTemplate
+ * Class Execute_attributes
+ * @package Sim
  */
-class execute_attributes extends Code{
+class Execute_attributes extends Code{
 
     protected $_attribute;
     protected $_value;
@@ -3821,16 +3823,16 @@ class execute_attributes extends Code{
 }
 
 /**
- * Class execute_attr
- * @package SimTemplate
+ * Class Execute_attr
+ * @package Sim
  */
-class execute_attr extends execute_attributes{}
+class Execute_attr extends Execute_attributes{}
 
 /**
- * Class execute_class
- * @package SimTemplate
+ * Class Execute_class
+ * @package Sim
  */
-class execute_class extends Code{
+class Execute_class extends Code{
 
     protected $_class;
     protected $_remove=false;
@@ -3902,7 +3904,7 @@ class execute_class extends Code{
             return null;
         }
 
-        $this->_node->setClassContent('<? \\'.__NAMESPACE__.'\execute_class::removeDuplicateClasses(
+        $this->_node->setClassContent('<? \\'.__NAMESPACE__.'\Execute_class::removeDuplicateClasses(
                     array(\''.implode('\',\'', array_keys($native_classes)).'\'), 
                     array('.implode(',', array_keys($custom_classes)).')
                  ); ?>');
@@ -3927,10 +3929,10 @@ class execute_class extends Code{
 }
 
 /**
- * Class execute_set
- * @package SimTemplate
+ * Class Execute_set
+ * @package Sim
  */
-class execute_set extends Code{
+class Execute_set extends Code{
 
     protected $_variable;
     protected $_value;
@@ -3953,10 +3955,10 @@ class execute_set extends Code{
 }
 
 /**
- * Class execute_import
- * @package SimTemplate
+ * Class Execute_import
+ * @package Sim
  */
-class execute_import extends Code {
+class Execute_import extends Code {
     protected $_resource;
     protected $_prefix;
 
@@ -3969,14 +3971,14 @@ class execute_import extends Code {
     }
 
     protected function commandExecution(){
-        $this->_node->before('<? \\'.__NAMESPACE__.'\execute_import::get('.$this->_resource.', '.$this->_prefix.', $template[\'object\']); ?>');
+        $this->_node->before('<? \\'.__NAMESPACE__.'\Execute_import::get('.$this->_resource.', '.$this->_prefix.', $template[\'object\']); ?>');
     }
 
     protected function conditionExecution($condition){
-        $this->_node->before('<? if ('.$condition.'): '.__NAMESPACE__.'\execute_import::get('.$this->_resource.', '.$this->_prefix.', $template[\'object\']); endif; ?>');
+        $this->_node->before('<? if ('.$condition.'): '.__NAMESPACE__.'\Execute_import::get('.$this->_resource.', '.$this->_prefix.', $template[\'object\']); endif; ?>');
     }
 
-    public static function get($resource='', $prefix='', Sim $template_object){
+    public static function get($resource='', $prefix='', Environment $template_object){
         try {
             $arMacros = (new Index())->getMacros(File::get_content($resource));
             foreach ($arMacros as $item){
@@ -3989,10 +3991,10 @@ class execute_import extends Code {
 }
 
 /**
- * Class execute_include
- * @package SimTemplate
+ * Class Execute_include
+ * @package Sim
  */
-class execute_include extends Code {
+class Execute_include extends Code {
     protected $_resource;
     protected $_data;
     protected $_load_type;
@@ -4029,24 +4031,24 @@ class execute_include extends Code {
                 //Отчищаем перечень зависимостей в текущем элементе индекса
                 $this->_index_item->clear('nested');
             }
-            $this->_node->content('<?= \\'.__NAMESPACE__.'\execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); ?>');
+            $this->_node->content('<?= \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); ?>');
         } elseif ($this->_load_type == 'set'){
-            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); ?>');
+            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); ?>');
         }
 
     }
 
     protected function conditionExecution($condition){
         if ($this->_load_type == 'include'){
-            $this->_node->content('<? if ('.$condition.'):  echo \\'.__NAMESPACE__.'\execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); else: ?>'.$this->_node->getContent().'<? endif; ?>');
+            $this->_node->content('<? if ('.$condition.'):  echo \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); else: ?>'.$this->_node->getContent().'<? endif; ?>');
         } elseif ($this->_load_type == 'set'){
-            $this->_node->before('<? if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); endif; ?>');
+            $this->_node->before('<? if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); endif; ?>');
         }
     }
 
-    public static function get($resource='', $data = null, Sim $template_object){
+    public static function get($resource='', $data = null, Environment $template_object){
 
-        $sim = new Sim(array('CachePath' => $template_object->getCachePath()));
+        $sim = new Environment(array('CachePath' => $template_object->getCachePath()));
         $sim->onDebug($template_object->getDebugStatus());
         $sim->macros = $template_object->macros;
         if ((empty($data))){
@@ -4062,10 +4064,10 @@ class execute_include extends Code {
 }
 
 /**
- * Class execute_resource
- * @package SimTemplate
+ * Class Execute_resource
+ * @package Sim
  */
-class execute_resource extends Code{
+class Execute_resource extends Code{
     protected $_resource;
     protected $_params;
     protected $_load_type;
@@ -4106,23 +4108,23 @@ class execute_resource extends Code{
             }
 
             //Заменяем содержание текущего сегмента
-            $this->_node->content('<?= \\'.__NAMESPACE__.'\execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
+            $this->_node->content('<?= \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
 
         } elseif ($this->_load_type == 'import'){
-            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\execute_resource::get('.$this->_resource.', '.$this->_params.', true, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
+            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', true, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
         } elseif ($this->_load_type == 'set'){
-            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
+            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
         }
     }
 
     protected function conditionExecution($condition){
 
         if ($this->_load_type == 'include'){
-            $this->_node->content('<? if ('.$condition.'):  echo \\'.__NAMESPACE__.'\execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); else: ?>'.$this->_node->getContent().'<? endif; ?>');
+            $this->_node->content('<? if ('.$condition.'):  echo \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); else: ?>'.$this->_node->getContent().'<? endif; ?>');
         } elseif ($this->_load_type == 'import'){
-            $this->_node->before('<?  if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\execute_resource::get('.$this->_resource.', '.$this->_params.', true, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
+            $this->_node->before('<?  if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', true, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
         } elseif ($this->_load_type == 'set'){
-            $this->_node->before('<? if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
+            $this->_node->before('<? if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
         }
 
     }
@@ -4138,7 +4140,7 @@ class execute_resource extends Code{
         if (empty($cache_path)) $cache_time = 0;
 
         if ($cache_time > 0) {
-            $cache_id = sha1($resource.serialize($params).(($revert_vars) ? '_vars' : '')).SIM_TEMPLATE_VERSION;
+            $cache_id = sha1($resource.serialize($params).(($revert_vars) ? '_vars' : '')).SIM_VERSION;
             $cache = File::exists($cache_path . $cache_id . '.simdata');
         }
 
@@ -4245,10 +4247,10 @@ class execute_resource extends Code{
 }
 
 /**
- * Class execute_vardump
- * @package SimTemplate
+ * Class Execute_vardump
+ * @package Sim
  */
-class execute_vardump extends Code{
+class Execute_vardump extends Code{
 
     protected $_source_varible;
     protected $_variable;
@@ -4281,10 +4283,10 @@ class execute_vardump extends Code{
 }
 
 /**
- * Class execute_ignore
- * @package SimTemplate
+ * Class Execute_ignore
+ * @package Sim
  */
-class execute_ignore extends Code{
+class Execute_ignore extends Code{
 
     protected $_variable;
     protected $_value;
@@ -4315,10 +4317,10 @@ class execute_ignore extends Code{
 }
 
 /**
- * Class execute_usemacro
- * @package SimTemplate
+ * Class Execute_usemacro
+ * @package Sim
  */
-class execute_usemacro extends Code{
+class Execute_usemacro extends Code{
 
     protected $_macro_name;
     protected $_macro_data;
@@ -4362,10 +4364,10 @@ class execute_usemacro extends Code{
 }
 
 /**
- * Class execute_interface
- * @package SimTemplate
+ * Class Execute_interface
+ * @package Sim
  */
-class execute_interface extends Code{
+class Execute_interface extends Code{
 
     protected $_interface_value;
     protected $_source_value;
@@ -4398,7 +4400,7 @@ class execute_interface extends Code{
     }
 
     protected function codeGenerate($show_error=true){
-        $code = '\\'.__NAMESPACE__.'\execute_interface::checkInterface('.$this->_interface_value.', '.$this->_source_value.', '.(($show_error) ? 'true' : 'false').')';
+        $code = '\\'.__NAMESPACE__.'\Execute_interface::checkInterface('.$this->_interface_value.', '.$this->_source_value.', '.(($show_error) ? 'true' : 'false').')';
         return $code;
     }
 
@@ -4460,7 +4462,7 @@ class execute_interface extends Code{
  * Управление файлами
  *
  * Class File
- * @package SimTemplate
+ * @package Sim
  */
 class File {
 
@@ -4607,7 +4609,7 @@ class File {
  * Сервисные функции
  *
  * Class Procedure
- * @package SimTemplate
+ * @package Sim
  */
 class Procedure {
 
@@ -4679,14 +4681,14 @@ class Procedure {
      */
     final public static function autoload($class) {
         $class = str_replace(__NAMESPACE__.'\\', '', $class);
-        $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'sim-extension' . DIRECTORY_SEPARATOR . $class . '.sim.php';
+        $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'extension' . DIRECTORY_SEPARATOR . $class . '.sim.php';
         @include_once $path;
     }
 
     /**
      * Регаистрация обработчик автозагрузки классов
      * Для использования собственного автозагрузчика для шаблонизатора, используйте:
-     * spl_autoload_unregister(array('SimTemplate\Procedure','autoload'));
+     * spl_autoload_unregister(array('Sim\Procedure','autoload'));
      */
     final static public function autoload_register(){
 
@@ -4708,7 +4710,7 @@ class Procedure {
  * Исключения
  *
  * Class Exception
- * @package SimTemplate
+ * @package Sim
  */
 class Exception  extends \Exception {
 

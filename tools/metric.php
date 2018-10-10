@@ -116,6 +116,6 @@ EOD;
 
 $data = json_decode($_REQUEST['data'], true);
 require_once($data['sim']);
-$sim = new \SimTemplate\Sim();
+$sim = new \Sim\Environment();
 $sim->macros->add('content', $content);
 $sim->execute($page, $data['metric']);
