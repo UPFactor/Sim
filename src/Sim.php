@@ -106,6 +106,33 @@ class Environment {
     }
 
     /**
+     * Возвращает коллекцию макросов
+     *
+     * @return Macros
+     */
+    public function getMacros(){
+        return $this->_macros;
+    }
+
+    /**
+     * Возврщает объект данных
+     *
+     * @return Data
+     */
+    public function getData(){
+        return $this->_data;
+    }
+
+    /**
+     * Возвращает объект метрики
+     *
+     * @return Metrics
+     */
+    public function getMetrics(){
+        return $this->_metrics;
+    }
+
+    /**
      * Устанавливает параметры шаблонизатора. Принимает массив значений
      *  • RootURL — Корень для автозамены относительных ссылок используемых в шаблоне
      *  • RootPath — Полный путь до дирректории с шаблонами
@@ -459,7 +486,7 @@ class Environment {
      * @param bool $revert — Если установлено «true», то вывод шаблона на клиенте будет заблокирован, а метод execute вернет строку (string) с скомпилированным кодом шаблона
      * @return Environment|string
      */
-    public function execute($template, array $data = array(), $revert = false){
+    public function render($template, array $data = array(), $revert = false){
 
         //Выполняем компиляцию шаблона
         $compile = $this->compile($template);
@@ -559,21 +586,8 @@ class Environment {
             return $template_result;
         } else {
             echo $template_result;
-            if ($this->_debug === true) $this->_metrics->showLink();
             return $this;
         }
-    }
-
-    /**
-     * Упращенная конструкция функции «execute».
-     * Выполняет компиляцию и рендеринг шаблона с учетом установленных настроек шаблонизатора
-     *
-     * @param string $template Исходный код шаблона или путь до файла шаблона относительно директории заданной в параметре «setRootPath»
-     * @return Environment
-     */
-    public function render($template){
-        $this->execute($template);
-        return $this;
     }
 }
 
@@ -1291,7 +1305,7 @@ class Macro{
         if ($this->_debug === true) $sim->onDebug(true);
 
         //Выполняем шаблонизацию макроса
-        $result = $sim->execute($this->_template_source, $data, true);
+        $result = $sim->render($this->_template_source, $data, true);
 
         //Объединяем метрики
         if ($this->_debug === true and $this->_metrics !== null){
@@ -4105,7 +4119,7 @@ class Execute_include extends Code {
         } elseif (is_array($data)){
             $sim->data->set($data);
         }
-        $template = $sim->execute($resource, array(), true);
+        $template = $sim->render($resource, array(), true);
         $template_object->metrics->params($resource, $sim->metrics->get(), 'include');
 
         return $template;
@@ -4404,11 +4418,11 @@ class Execute_usemacro extends Code{
             $this->_index_item->clear('nested');
         }
 
-        $this->_node->content('<? echo $template[\'object\']->macros->get('.$this->_macro_name.')->execute((array) '.$this->_macro_data.'); ?>');
+        $this->_node->content('<? echo $template[\'object\']->macros->get('.$this->_macro_name.')->render((array) '.$this->_macro_data.'); ?>');
     }
 
     protected function conditionExecution($condition){
-        $this->_node->content('<? if ('.$condition.'): echo $template[\'object\']->macros->get('.$this->_macro_name.')->execute((array) '.$this->_macro_data.'); else: ?>'.$this->_node->getContent().'<? endif; ?>');
+        $this->_node->content('<? if ('.$condition.'): echo $template[\'object\']->macros->get('.$this->_macro_name.')->render((array) '.$this->_macro_data.'); else: ?>'.$this->_node->getContent().'<? endif; ?>');
     }
 }
 
