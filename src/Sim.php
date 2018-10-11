@@ -28,36 +28,36 @@ class Environment {
     /**
      * @var string Корневая директория среды исполнения скрипта (по умолчанию $_SERVER['DOCUMENT_ROOT'])
      */
-    protected $_document_root;
+    private $_document_root;
 
     /**
      * @var string Корневой URL модификации относительных ссылок в обсолютные внутри шаблона
      */
-    protected $_root_url;
+    private $_root_url;
 
     /**
      * @var string Путь до корневой дирректории с шаблонами
      */
-    protected $_root_path;
+    private $_root_path;
 
     /**
      * @var string Путь до директории размещения файлов кеша
      */
-    protected $_cache_path;
+    private $_cache_path;
 
     /**
      * @var Macros коллекция макросов
      */
-    protected $macros;
+    private $_macros;
     /**
      * @var Data объект управления данными
      */
-    protected $data;
+    private $_data;
 
     /**
      * @var Metrics объект для формирования метрики выполнения скрипта
      */
-    protected $metrics;
+    private $_metrics;
 
     /**
      * Environment constructor.
@@ -72,7 +72,7 @@ class Environment {
     function __construct(array $configuration = array()){
 
         //Запуск метрики для отслеживания процесса выполнения шаблонизации
-        $this->metrics = (new Metrics())->start();
+        $this->_metrics = (new Metrics())->start();
 
         //Установка значений по умолчанию
         $this->_document_root = Procedure::get_document_root();
@@ -81,10 +81,10 @@ class Environment {
         $this->_cache_path = __DIR__.DIRECTORY_SEPARATOR.'Cache';
 
         //Создания объекта управления данными
-        $this->data = new Data();
+        $this->_data = new Data();
 
         //Создания объекта управления макросами
-        $this->macros = new Macros(array(), $this->metrics);
+        $this->_macros = new Macros(array(), $this->_metrics);
 
         //Установка конфигураций шаблонизации
         $this->setConfiguration($configuration);
@@ -163,7 +163,7 @@ class Environment {
             $e->showError();
         }
         $this->_root_url = $url;
-        $this->macros->setDefaultRootURL($url);
+        $this->_macros->setDefaultRootURL($url);
         return $this;
     }
 
@@ -191,7 +191,7 @@ class Environment {
             $e->showError();
         }
         $this->_root_path = $path;
-        $this->macros->setDefaultRootPath($path);
+        $this->_macros->setDefaultRootPath($path);
         return $this;
     }
 
@@ -227,7 +227,7 @@ class Environment {
             $e->showError();
         }
         $this->_cache_path = $cache_path;
-        $this->macros->setDefaultCachePath($cache_path);
+        $this->_macros->setDefaultCachePath($cache_path);
     }
 
     /**
@@ -288,10 +288,10 @@ class Environment {
     public function onDebug($debug=true){
         if ($debug === true){
             $this->_debug = true;
-            $this->macros->onDebug(true);
+            $this->_macros->onDebug(true);
         } else {
             $this->_debug = false;
-            $this->macros->onDebug(false);
+            $this->_macros->onDebug(false);
         }
     }
 
@@ -360,7 +360,7 @@ class Environment {
     public function compile($template){
 
         //Старт метрики выполнения
-        if ($this->_debug === true) $metric_id = $this->metrics->begin('compile');
+        if ($this->_debug === true) $metric_id = $this->_metrics->begin('compile');
 
         $result = array(
             'path' => false,
@@ -393,7 +393,7 @@ class Environment {
             //Устанавливаем root_url относительно пути к шаблону, если не задан иной
             if (!empty($template_file) and empty($this->_root_url)){
                 $this->_root_url = str_replace($this->_document_root, '', dirname($template_file)).'/';
-                $this->macros->setDefaultRootURL($this->_root_url, false);
+                $this->_macros->setDefaultRootURL($this->_root_url, false);
             }
 
             //Проверяем существование файла кеша по $template_hash
@@ -404,14 +404,14 @@ class Environment {
 
                 //Метка — страница возвращена из кеша
                 $result['cache'] = true;
-                if ($this->_debug === true) $this->metrics->params('Cache', 'yes');
+                if ($this->_debug === true) $this->_metrics->params('Cache', 'yes');
 
                 //Получаем содержание кеша (скомпилированный шаблон)
                 $result['template'] = $template_cache->content();
 
             } else {
 
-                if ($this->_debug === true) $this->metrics->params('Cache', 'no');
+                if ($this->_debug === true) $this->_metrics->params('Cache', 'no');
 
                 //Получаем содержание шаблона
                 $template_source = ($template_file) ? (new File($template_file))->content() : $template;
@@ -420,8 +420,8 @@ class Environment {
                 $template_source = $this->linksNormaliz($template_source);
 
                 //Выполняем компиляцию шаблона в php
-                $index = ($this->_debug === true) ? new Index($this->metrics) : new Index();
-                $result['template'] = $index->compile($template_source, $this->data->blocks());
+                $index = ($this->_debug === true) ? new Index($this->_metrics) : new Index();
+                $result['template'] = $index->compile($template_source, $this->_data->blocks());
 
                 //Сохранить в конечный документ в файл для дальнейшего вывода
                 $template_cache = File::create($this->_cache_path, $template_hash . '.simcache', $result['template']);
@@ -429,7 +429,7 @@ class Environment {
 
             //Получаем путь до файла кеша
             $result['cache_file'] = $template_cache->path();
-            if ($this->_debug === true) $this->metrics->params('Cache file', $result['cache_file']);
+            if ($this->_debug === true) $this->_metrics->params('Cache file', $result['cache_file']);
 
         } catch (Exception $e) {
             if ($result['path'] !== false) {
@@ -446,7 +446,7 @@ class Environment {
         }
 
         //Фиксируем метрику выполнения
-        if ($this->_debug === true) $this->metrics->end($metric_id);
+        if ($this->_debug === true) $this->_metrics->end($metric_id);
 
         return $result;
     }
@@ -466,13 +466,13 @@ class Environment {
         unset($compile['template']);
 
         //Стартуем метрику выполнения
-        if ($this->_debug === true) $metric_id = $this->metrics->begin('execute');
+        if ($this->_debug === true) $metric_id = $this->_metrics->begin('execute');
 
         $template_result = '';
 
         try {
 
-            $this->data->add($data);
+            $this->_data->add($data);
 
             //Включаем отображение всех ошибок и указываем обработчик ошибок
             $old_error_reporting = error_reporting(-1);
@@ -527,7 +527,7 @@ class Environment {
 
                 return $result;
 
-            }, $this->data, $this->data);
+            }, $this->_data, $this->_data);
 
             //выполнение кеша шаблона
             $template_result = $template_execute_code(array_merge($compile, array('object' => $this)));
@@ -552,14 +552,14 @@ class Environment {
         }
 
         //Отображение информации о компиляции для редима отладки
-        if ($this->_debug === true) $this->metrics->end($metric_id);
+        if ($this->_debug === true) $this->_metrics->end($metric_id);
 
         //Определяем способ выполнения и вывода конечного документа
         if ($revert) {
             return $template_result;
         } else {
             echo $template_result;
-            if ($this->_debug === true) $this->metrics->showLink();
+            if ($this->_debug === true) $this->_metrics->showLink();
             return $this;
         }
     }
@@ -826,6 +826,16 @@ class DataBlock{
 class Macros{
 
     /**
+     * @var bool переключатель сервисного режима для отладки
+     */
+    private $_debug = false;
+
+    /**
+     * @var Metrics Объект для формирования метрики выполнения скрипта
+     */
+    private $_metrics = null;
+
+    /**
      * @var array коллекция макросов
      */
     private $_macros=array();
@@ -840,19 +850,9 @@ class Macros{
     );
 
     /**
-     * @var Metrics Объект для формирования метрики выполнения скрипта
-     */
-    private $_metrics = null;
-
-    /**
-     * @var bool переключатель сервисного режима для отладки
-     */
-    private $_debug = false;
-
-    /**
      * Macros constructor.
      * @param array $configuration
-     * @param Metrics|null $metrics
+     * @param Metrics $metrics
      */
     function __construct(array $configuration=array(), Metrics $metrics = null){
         $this->_metrics = $metrics;
@@ -873,9 +873,19 @@ class Macros{
 
         if (!empty($this->_macros) and $reset){
             foreach ($this->_macros as $macro){
-                $macro->debug = $debug;
+                /** @var Macro $macro */
+                $macro->onDebug($debug);
             }
         }
+    }
+
+    /**
+     * Возвращает текущий статус режима отладки (включен/выключен)
+     *
+     * @return bool
+     */
+    public function getDebugStatus(){
+        return $this->_debug;
     }
 
     /**
@@ -1028,16 +1038,13 @@ class Macros{
             $this->_macros[$name] = new Macro(
                 $name,
                 $template_source,
-                array_merge($this->_default_configuration, $configuration)
+                array_merge($this->_default_configuration, $configuration),
+                $this->_metrics
             );
 
-            //Передаем метрику
-            $this->_macros[$name]->metrics = $this->_metrics;
-
             //Устанавливаем флаг режима отладки
-            if ($this->_debug === true) {
-                $this->_macros[$name]->debug = true;
-            }
+            $this->_macros[$name]->onDebug($this->_debug);
+
 
         } catch (Exception $e) {
             $e->showError();
@@ -1131,29 +1138,52 @@ class Macro{
     );
 
     /**
-     * @var Metrics Объект для формирования метрики выполнения скрипта
-     */
-    public $metrics = null;
-
-    /**
      * @var bool переключатель сервисного режима для отладки
      */
-    public $debug = false;
+    private $_debug = false;
+
+    /**
+     * @var Metrics Объект для формирования метрики выполнения скрипта
+     */
+    private $_metrics = null;
 
     /**
      * Macro constructor.
      * @param string $name имя макроса
      * @param string $template_source путь к шаблону или исходный код шаблона
      * @param array $configuration конфигурации макроса
+     * @param Metrics $metrics Объект метрики
      * @throws Exception
      */
-    final function __construct($name, $template_source, array $configuration=array()){
+    final function __construct($name, $template_source, array $configuration=array(), Metrics $metrics = null){
         if (empty($name)) throw new Exception("Impossible create macro without a name");
         if (!is_string($name)) throw new Exception("Incorrect macro name");
         if (empty($template_source)) throw new Exception("No incoming template source for create macro");
         $this->_name = $name;
         $this->_template_source = $template_source;
+        $this->_metrics = $metrics;
         $this->setConfiguration($configuration);
+    }
+
+    /**
+     * Включает режим отладки
+     * Если $reset = true, устанавливает указанные параметр для всех элементов коллекции
+     *
+     * @param bool $debug
+     * @param bool $reset
+     */
+    public function onDebug($debug=true){
+        if (!is_bool($debug)) $debug = false;
+        $this->_debug = $debug;
+    }
+
+    /**
+     * Возвращает текущий статус режима отладки (включен/выключен)
+     *
+     * @return bool
+     */
+    public function getDebugStatus(){
+        return $this->_debug;
     }
 
     /**
@@ -1258,14 +1288,14 @@ class Macro{
         //Создаем объект шаблонизатора
         $sim = new Environment($this->_configuration);
         $sim->macros->add($this->_name, $this->_template_source);
-        if ($this->debug === true) $sim->onDebug(true);
+        if ($this->_debug === true) $sim->onDebug(true);
 
         //Выполняем шаблонизацию макроса
         $result = $sim->execute($this->_template_source, $data, true);
 
         //Объединяем метрики
-        if ($this->debug === true and $this->metrics !== null){
-            $this->metrics->params($this->_name, $sim->metrics->get(), 'macros');
+        if ($this->_debug === true and $this->_metrics !== null){
+            $this->_metrics->params($this->_name, $sim->metrics->get(), 'macros');
         }
 
         return $result;
