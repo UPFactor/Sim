@@ -685,13 +685,13 @@ class Metrics {
         return $metrics;
     }
 
-    public function showLink(){
+    /*public function showLink(){
         $data['metric'] = $this->get();
         $data['sim'] = __DIR__.'/Sim.php';
         $data = json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
         $link = str_replace(Procedure::get_document_root(), '',__DIR__).'/Tools/metric.php';
         echo '<form action="'.$link.'" method="post" target="_blank"><button type="submit" name="data" value=\''.$data.'\'>Open metric</button> </form>';
-    }
+    }*/
 }
 
 /**
@@ -4663,13 +4663,16 @@ class File {
 class Procedure {
 
     final static public function get_document_root(){
-        $result = false;
+        $result = '';
+
         try {
-            if (empty($_SERVER['DOCUMENT_ROOT'])) throw new Exception('Variable $_SERVER[\'DOCUMENT_ROOT\'] is empty');
-            if (!($result = realpath($_SERVER['DOCUMENT_ROOT']))) throw new Exception('Directory from variable $_SERVER[\'DOCUMENT_ROOT\'] not found');
+            if (!($result = realpath($_SERVER['DOCUMENT_ROOT']))) {
+                throw new Exception('Directory from variable $_SERVER[\'DOCUMENT_ROOT\'] not found');
+            }
         } catch (Exception $e) {
             $e->showError();
         }
+
         return $result;
     }
 
