@@ -1184,7 +1184,6 @@ class Macro{
      * Если $reset = true, устанавливает указанные параметр для всех элементов коллекции
      *
      * @param bool $debug
-     * @param bool $reset
      */
     public function onDebug($debug=true){
         if (!is_bool($debug)) $debug = false;
