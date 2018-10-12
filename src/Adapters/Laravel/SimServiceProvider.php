@@ -2,6 +2,7 @@
 
 namespace Sim\Adapters\Laravel;
 
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
 
 class SimServiceProvider extends ServiceProvider
@@ -31,9 +32,8 @@ class SimServiceProvider extends ServiceProvider
      * @return void
      */
     public function register(){
-        $config = (array) Config::get('sim');
-        $this->app->bind(\Sim\Environment::class, function() use ($config){
-            return new \Sim\Environment($config);
+        $this->app->bind(\Sim\Environment::class, function(){
+            return new \Sim\Environment((array)Config::get('sim'));
         });
     }
 }
