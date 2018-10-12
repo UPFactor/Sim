@@ -21,7 +21,7 @@ class SimServiceProvider extends ServiceProvider
     public function boot(){
         $this->publishes([
             __DIR__.'/SimConfig.php' => config_path('sim.php'),
-        ]);
+        ], 'config');
     }
 
 
