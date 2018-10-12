@@ -18,8 +18,10 @@ class SimServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
-    {
+    public function boot(){
+        $this->publishes([
+            __DIR__.'/SimConfig.php' => config_path('sim.php'),
+        ]);
     }
 
 
@@ -30,7 +32,7 @@ class SimServiceProvider extends ServiceProvider
      */
     public function register(){
         $this->app->bind(\Sim\Environment::class, function(){
-            return new \Sim\Environment();
+            return new \Sim\Environment((array)Config::get('sim'));
         });
     }
 }
