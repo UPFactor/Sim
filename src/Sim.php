@@ -99,7 +99,7 @@ class Environment {
      */
     function __get($property){
         if (in_array($property,array('macros','data','metrics'))){
-            return $this->{$property};
+            return $this->{'_'.$property};
         } else {
             throw new Exception($property . " property not found in object " . self::class);
         }
@@ -4234,7 +4234,7 @@ class Execute_resource extends Code{
                     return NULL;
                 }
 
-            //Если источник локальный
+                //Если источник локальный
             } else {
 
                 //Если выполняется экспорт переменных
@@ -4563,11 +4563,10 @@ class File {
      * @throws Exception
      */
     static public function get_content($filename){
-        $content = file_get_contents($filename);
-        if (false === $content) {
+        if (!file_exists($filename) or is_dir($filename)){
             throw new Exception("File not found — '$filename'");
         }
-        return $content;
+        return file_get_contents($filename);
     }
 
     /**
@@ -4575,6 +4574,9 @@ class File {
      * @return bool|File
      */
     static public function exists($filename){
+        if (!file_exists($filename) or is_dir($filename)){
+            return false;
+        }
         try {
             return new File($filename);
         } catch (\Exception $e) {
@@ -4594,9 +4596,13 @@ class File {
      */
     static public function create($path='/', $filename, $data){
         if (!file_exists($path)){
-            if (mkdir($path,0777,true) === false) throw new Exception("Error creating directory  '$path' ");
+            if (mkdir($path,0777,true) === false) {
+                throw new Exception("Error creating directory  '$path' ");
+            }
         }
-        if (file_put_contents($path.DIRECTORY_SEPARATOR.$filename, $data) === false) throw new Exception("Error creating file '$filename' ");
+        if (file_put_contents($path.DIRECTORY_SEPARATOR.$filename, $data) === false) {
+            throw new Exception("Error creating file '$filename' ");
+        }
         return new File($path.DIRECTORY_SEPARATOR.$filename);
     }
 
@@ -4625,11 +4631,10 @@ class File {
      * @throws Exception
      */
     public function content(){
-        $content = file_get_contents($this->_filename);
-        if (false === $content || ("" === $content && is_dir($this->_filename))) {
+        if (!file_exists($this->_filename) or is_dir($this->_filename)){
             throw new Exception("Unable to load file ".$this->_filename);
         }
-        return $content;
+        return file_get_contents($this->_filename);
     }
 
     /**
@@ -4660,7 +4665,9 @@ class File {
     public function save($filename){
         if ($filename = realpath($filename)){
             file_put_contents($filename,$this->content());
-            if (file_put_contents($filename, $this->content()) === false) throw new Exception("Error creating file '$filename' ");
+            if (file_put_contents($filename, $this->content()) === false){
+                throw new Exception("Error creating file '$filename' ");
+            }
             return new File($filename);
         }
         return false;
