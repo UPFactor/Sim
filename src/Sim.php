@@ -1589,7 +1589,7 @@ class Index{
         if (preg_match_all('/\<\!--\?\s*(.*?)\s*\?-->/is', $template, $match_php)) {
             foreach ($match_php[0] as $k => $php_content){
                 $php_replace_i = '{php'.$k.'}';
-                $arPHP[$php_replace_i] = '<?'.$match_php[1][$k].'?>';
+                $arPHP[$php_replace_i] = '<?php '.$match_php[1][$k].'?>';
                 $template = Procedure::str_replace_once($php_content, $php_replace_i, $template);
             }
         }
@@ -1619,7 +1619,7 @@ class Index{
         foreach ($arMacros as $macro_item){
             $macro_code.= '$template[\'object\']->macros->add(\''.$macro_item['name'].'\', \''.str_replace('\'','\\\'',$macro_item['content']).'\', array(\'RootURL\'=>\'\', \'RootPath\'=>\'\'));';
         }
-        if (!empty($macro_code)) $macro_code = '<? '.$macro_code.' ?>';
+        if (!empty($macro_code)) $macro_code = '<?php '.$macro_code.' ?>';
 
         //Устновка php-кода
         foreach ($arPHP as $php_replace_i => $php_item){
@@ -1652,11 +1652,11 @@ class Index{
                     $block_content = $block[1][$i].$this->compileBlocks($block[3][$i], $blocks).$block[4][$i];
                     $replace_i = $block_alias.$i;
                     $block_replace[$replace_i] = '
-                        <?
+                        <?php 
                         $sim_function_block_'.$block_alias.' = function (&$data) use ($root, $block, $template) { 
                         ?>
                             '.$block_content.'
-                        <?
+                        <?php 
                             unset($data);
                         };
                         $sim_function_block_'.$block_alias.'($block[\''.$block[2][$i].'\']);
@@ -3603,7 +3603,7 @@ class Execute_foreach extends Code {
         );
 
         $this->_foreach_code = array('
-            <? 
+            <?php 
                 try{
                     '.$variable['block'].'["index"] = 0;
                     foreach('.$variable['source'].' as '.$variable['step_key'].' => '.$variable['step_value'].'):
@@ -3611,13 +3611,13 @@ class Execute_foreach extends Code {
                         '.$variable['block'].'["key"] = '.$variable['step_key'].';
                         '.$variable['block'].'["number"] = '.$variable['block'].'["index"]+1'.'; 
             ?>',
-            '<? 
+            '<?php 
                         '.$variable['block'].'["index"]++;
                     endforeach; 
                     unset('.$variable['block'].','.$variable['step_key'].','.$variable['step_value'].');
                 } catch (\Exception $e){?>
                     '.$this->_exception_content.'
-                <?}
+                <?php }
             ?>'
         );
 
@@ -3628,7 +3628,7 @@ class Execute_foreach extends Code {
     }
 
     protected function conditionExecution($condition) {
-        $this->_node->content('<? if ('.$condition.'): ?>'.$this->_foreach_code[0].$this->_nested_content.$this->_foreach_code[1].'<? else: ?>'.$this->_nested_content.'<? endif; ?>');
+        $this->_node->content('<?php if ('.$condition.'): ?>'.$this->_foreach_code[0].$this->_nested_content.$this->_foreach_code[1].'<?php else: ?>'.$this->_nested_content.'<?php endif; ?>');
     }
 
 
@@ -3698,9 +3698,9 @@ class Execute_repeat extends Execute_foreach {
 
     protected function conditionExecution($condition) {
 
-        $this->_node->before('<? if ('.$condition.'): ?>'.$this->_foreach_code[0]);
+        $this->_node->before('<?php if ('.$condition.'): ?>'.$this->_foreach_code[0]);
         $this->_node->content($this->_nested_content);
-        $this->_node->after($this->_foreach_code[1].'<? else: ?>'.$this->_nested_content.'<? endif; ?>');
+        $this->_node->after($this->_foreach_code[1].'<?php else: ?>'.$this->_nested_content.'<?php endif; ?>');
 
     }
 
@@ -3760,7 +3760,7 @@ class Execute_content extends Code{
     }
 
     protected function conditionExecution($condition){
-        $this->_node->content('<? if ('.$condition.'): echo '.$this->_value.'; else: ?>'.$this->_node->getContent().'<? endif; ?>');
+        $this->_node->content('<?php if ('.$condition.'): echo '.$this->_value.'; else: ?>'.$this->_node->getContent().'<?php endif; ?>');
     }
 
 }
@@ -3832,7 +3832,7 @@ class Execute_attributes extends Code{
 
             $value = 'echo '.$this->_value.';';
             $custom_attributes->set($this->_attribute, $value);
-            $custom_attributes->setWrapper($this->_attribute, '<? ', ' ?>');
+            $custom_attributes->setWrapper($this->_attribute, '<?php ', ' ?>');
             $native_attributes->remove($this->_attribute);
 
         }
@@ -3878,7 +3878,7 @@ class Execute_attributes extends Code{
 
         }
 
-        $custom_attributes->setWrapper($this->_attribute, '<? ', ' ?>');
+        $custom_attributes->setWrapper($this->_attribute, '<?php ', ' ?>');
         return null;
     }
 
@@ -3922,7 +3922,7 @@ class Execute_class extends Code{
         } else {
             $value = 'echo '.$this->_class.';';
             $custom_classes->set($this->_class, $value);
-            $custom_classes->setWrapper($this->_class, '<? ', ' ?>');
+            $custom_classes->setWrapper($this->_class, '<?php ', ' ?>');
         }
 
         $this->getControllerDuplicateClasses();
@@ -3949,7 +3949,7 @@ class Execute_class extends Code{
             $custom_classes->set($this->_class, $value);
         }
 
-        $custom_classes->setWrapper($this->_class, '<? ', ' ?>');
+        $custom_classes->setWrapper($this->_class, '<?php ', ' ?>');
         $this->getControllerDuplicateClasses();
     }
 
@@ -3966,7 +3966,7 @@ class Execute_class extends Code{
             return null;
         }
 
-        $this->_node->setClassContent('<? \\'.__NAMESPACE__.'\Execute_class::removeDuplicateClasses(
+        $this->_node->setClassContent('<?php \\'.__NAMESPACE__.'\Execute_class::removeDuplicateClasses(
                     array(\''.implode('\',\'', array_keys($native_classes)).'\'), 
                     array('.implode(',', array_keys($custom_classes)).')
                  ); ?>');
@@ -4008,11 +4008,11 @@ class Execute_set extends Code{
     }
 
     protected function commandExecution(){
-        $this->_node->before('<? '.$this->_variable.' = '.$this->_value.'; ?>');
+        $this->_node->before('<?php '.$this->_variable.' = '.$this->_value.'; ?>');
     }
 
     protected function conditionExecution($condition){
-        $this->_node->before('<? if ('.$condition.'): '.$this->_variable.' = '.$this->_value.'; endif; ?>');
+        $this->_node->before('<?php if ('.$condition.'): '.$this->_variable.' = '.$this->_value.'; endif; ?>');
     }
 }
 
@@ -4033,11 +4033,11 @@ class Execute_import extends Code {
     }
 
     protected function commandExecution(){
-        $this->_node->before('<? \\'.__NAMESPACE__.'\Execute_import::get('.$this->_resource.', '.$this->_prefix.', $template[\'object\']); ?>');
+        $this->_node->before('<?php \\'.__NAMESPACE__.'\Execute_import::get('.$this->_resource.', '.$this->_prefix.', $template[\'object\']); ?>');
     }
 
     protected function conditionExecution($condition){
-        $this->_node->before('<? if ('.$condition.'): '.__NAMESPACE__.'\Execute_import::get('.$this->_resource.', '.$this->_prefix.', $template[\'object\']); endif; ?>');
+        $this->_node->before('<?php if ('.$condition.'): '.__NAMESPACE__.'\Execute_import::get('.$this->_resource.', '.$this->_prefix.', $template[\'object\']); endif; ?>');
     }
 
     public static function get($resource='', $prefix='', Environment $template_object){
@@ -4095,16 +4095,16 @@ class Execute_include extends Code {
             }
             $this->_node->content('<?= \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); ?>');
         } elseif ($this->_load_type == 'set'){
-            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); ?>');
+            $this->_node->before('<?php '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); ?>');
         }
 
     }
 
     protected function conditionExecution($condition){
         if ($this->_load_type == 'include'){
-            $this->_node->content('<? if ('.$condition.'):  echo \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); else: ?>'.$this->_node->getContent().'<? endif; ?>');
+            $this->_node->content('<?php if ('.$condition.'):  echo \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); else: ?>'.$this->_node->getContent().'<?php endif; ?>');
         } elseif ($this->_load_type == 'set'){
-            $this->_node->before('<? if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); endif; ?>');
+            $this->_node->before('<?php if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_include::get('.$this->_resource.', '.$this->_data.', $template[\'object\']); endif; ?>');
         }
     }
 
@@ -4173,20 +4173,20 @@ class Execute_resource extends Code{
             $this->_node->content('<?= \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
 
         } elseif ($this->_load_type == 'import'){
-            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', true, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
+            $this->_node->before('<?php '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', true, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
         } elseif ($this->_load_type == 'set'){
-            $this->_node->before('<? '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
+            $this->_node->before('<?php '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); ?>');
         }
     }
 
     protected function conditionExecution($condition){
 
         if ($this->_load_type == 'include'){
-            $this->_node->content('<? if ('.$condition.'):  echo \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); else: ?>'.$this->_node->getContent().'<? endif; ?>');
+            $this->_node->content('<?php if ('.$condition.'):  echo \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); else: ?>'.$this->_node->getContent().'<?php endif; ?>');
         } elseif ($this->_load_type == 'import'){
-            $this->_node->before('<?  if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', true, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
+            $this->_node->before('<?php if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', true, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
         } elseif ($this->_load_type == 'set'){
-            $this->_node->before('<? if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
+            $this->_node->before('<?php if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_resource::get('.$this->_resource.', '.$this->_params.', false, '.$this->_resource_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
         }
 
     }
@@ -4326,11 +4326,11 @@ class Execute_vardump extends Code{
     }
 
     protected function commandExecution(){
-        $this->_node->before('<?'.$this->codeGenerate().'?>');
+        $this->_node->before('<?php '.$this->codeGenerate().'?>');
     }
 
     protected function conditionExecution($condition){
-        $this->_node->before('<? if ('.$condition.'): '.$this->codeGenerate().' endif; ?>');
+        $this->_node->before('<?php if ('.$condition.'): '.$this->codeGenerate().' endif; ?>');
     }
 
     protected function codeGenerate(){
@@ -4373,8 +4373,8 @@ class Execute_ignore extends Code{
     }
 
     protected function conditionExecution($condition){
-        $this->_node->before('<? if (!('.$condition.')): ?>');
-        $this->_node->after('<? endif; ?>');
+        $this->_node->before('<?php if (!('.$condition.')): ?>');
+        $this->_node->after('<?php endif; ?>');
     }
 }
 
@@ -4417,11 +4417,11 @@ class Execute_usemacro extends Code{
             $this->_index_item->clear('nested');
         }
 
-        $this->_node->content('<? echo $template[\'object\']->macros->get('.$this->_macro_name.')->render((array) '.$this->_macro_data.'); ?>');
+        $this->_node->content('<?php echo $template[\'object\']->macros->get('.$this->_macro_name.')->render((array) '.$this->_macro_data.'); ?>');
     }
 
     protected function conditionExecution($condition){
-        $this->_node->content('<? if ('.$condition.'): echo $template[\'object\']->macros->get('.$this->_macro_name.')->render((array) '.$this->_macro_data.'); else: ?>'.$this->_node->getContent().'<? endif; ?>');
+        $this->_node->content('<?php if ('.$condition.'): echo $template[\'object\']->macros->get('.$this->_macro_name.')->render((array) '.$this->_macro_data.'); else: ?>'.$this->_node->getContent().'<?php endif; ?>');
     }
 }
 
@@ -4446,7 +4446,7 @@ class Execute_interface extends Code{
 
     protected function commandExecution(){
         if (empty($this->_exception)){
-            $this->_node->before('<?'.$this->codeGenerate().';?>');
+            $this->_node->before('<?php '.$this->codeGenerate().';?>');
         } else {
             $this->_index_controller->compileCommandIndex($this->_exception, $this->_index_item, 'NOT '.$this->codeGenerate(false));
         }
@@ -4454,7 +4454,7 @@ class Execute_interface extends Code{
 
     protected function conditionExecution($condition){
         if (empty($this->_exception)) {
-            $this->_node->before('<? if (' . $condition . '): ' . $this->codeGenerate() . '; endif; ?>');
+            $this->_node->before('<?php if (' . $condition . '): ' . $this->codeGenerate() . '; endif; ?>');
         } else {
             $condition = '('.$condition.') AND (NOT '.$this->codeGenerate(false).')';
             $this->_index_controller->compileCommandIndex($this->_exception, $this->_index_item, $condition);
