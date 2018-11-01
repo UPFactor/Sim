@@ -6,8 +6,6 @@
 
 namespace Sim;
 
-define('VERSION', '3.0.0');
-
 Procedure::autoload_register();
 
 /**
@@ -19,6 +17,8 @@ Procedure::autoload_register();
  * @package Sim
  */
 class Environment {
+
+    const version = '3.0.1';
 
     /**
      * @var bool переключатель сервисного режима для отладки
@@ -371,7 +371,7 @@ class Environment {
             $template_file = false;
             $template_hash = sha1($template);
         }
-        return array('hash'=>$template_hash.VERSION, 'file'=>$template_file);
+        return array('hash'=>$template_hash.self::version, 'file'=>$template_file);
     }
 
     /**
@@ -4202,7 +4202,7 @@ class Execute_resource extends Code{
         if (empty($cache_path)) $cache_time = 0;
 
         if ($cache_time > 0) {
-            $cache_id = sha1($resource.serialize($params).(($revert_vars) ? '_vars' : '')).VERSION;
+            $cache_id = sha1($resource.serialize($params).(($revert_vars) ? '_vars' : '')).Environment::version;
             $cache = File::exists($cache_path . $cache_id . '.simdata');
         }
 
