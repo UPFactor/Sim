@@ -18,7 +18,7 @@ Procedure::autoload_register();
  */
 class Environment {
 
-    const version = '3.0.1';
+    const version = '3.0.2';
 
     /**
      * @var bool переключатель сервисного режима для отладки
@@ -2772,7 +2772,7 @@ class Filter_e extends Filter_escape {}
  */
 class Filter_json_encode extends Filter {
     public function initialize($var, array $params = array()){
-        return 'json_encode('.$var.', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE)';
+        return '\\'.__NAMESPACE__.'\Procedure::json('.$var.')';
     }
 }
 
@@ -4046,7 +4046,7 @@ class Execute_import extends Code {
             foreach ($arMacros as $item){
                 $template_object->macros->add($prefix.$item['name'],$item['content']);
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             throw new Exception('Template for import not found "'.$resource.'"');
         }
     }
@@ -4125,6 +4125,96 @@ class Execute_include extends Code {
     }
 }
 
+
+class Execute_controller extends Code {
+    protected $_controller;
+    protected $_params;
+    protected $_load_to;
+    protected $_controller_cache_time;
+
+    protected function initialize($command){
+        if (preg_match('/\s*(controller)\s*\((.*?)\s*,\s*(\$[a-z0-9-_\.]+)(?:,\s*(\[.*?\]|\$[a-z0-9-_\.]+))?(?:\s+~cache +(\$[a-z0-9-_\.]+|\d+))?\s*\)\s*$/is',$command,$command_content)){
+            $this->_controller =$this->concat($command_content['2']);
+            $this->_load_to = $this->getVariable($command_content['3']);
+            $this->_params = (empty($command_content['4'])) ? 'array()' : $this->concat($command_content['4']);
+            $this->_controller_cache_time = (empty($command_content['5'])) ? 0 : (integer) $this->concat($command_content['5']);
+        } else return false;
+        return true;
+    }
+
+    protected function commandExecution(){
+        $this->_node->before('<?php '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_controller::get('.$this->_controller.', '.$this->_params.', '.$this->_controller_cache_time.', $template[\'object\']->getCachePath()); ?>');
+    }
+
+    protected function conditionExecution($condition){
+        $this->_node->before('<?php if ('.$condition.'): '.$this->_load_to.' = \\'.__NAMESPACE__.'\Execute_controller::get('.$this->_controller.', '.$this->_params.', '.$this->_controller_cache_time.', $template[\'object\']->getCachePath()); endif; ?>');
+    }
+
+    public static function get($controller, $params, $cache_time = 0, $cache_path=''){
+        $controller = str_replace('&#092;','\\', (string) $controller);
+        $cache_time = (integer) $cache_time;
+        $params = (array) $params;
+        $cache_id = false;
+        $result = null;
+
+        if (empty($controller)) {
+            return null;
+        }
+
+        //Проверка актуальности кеша
+        if ($cache_time > 0) {
+            $cache_id = sha1($controller.Procedure::json($params)).Environment::version;
+            $cache = File::exists($cache_path . $cache_id . '.simdata');
+
+            if ($cache and $cache->time(true) > $cache_time){
+                //Восстанавливаем данные из кеша
+                return Procedure::jsonDecode($cache->content());
+            }
+        }
+
+        //Получение компонентов контроллера
+        $components = explode('.', $controller, 2);
+        if (empty($components) or count($components) != 2){
+            die('incorrect');
+        }
+
+        //Контроль наличия
+        $calss = $components[0];
+        $method = $components[1];
+        try{
+            $controller = new \ReflectionMethod($calss, $method);
+        } catch (\Exception $e){
+            throw new Exception('Controller '.$calss.'.'.$method.'() does not exist');
+        }
+
+        //Контроль доступности
+        if(!$controller->isPublic()){
+            throw new Exception('Controller '.$calss.'.'.$method.'() is not available');
+        }
+
+        //Выполнение переданного контроллера
+        if ($controller->isStatic()){
+            $result = $controller->invokeArgs(null, $params);
+        } else {
+            $result = $controller->invokeArgs(new $calss, $params);
+        }
+
+        //Контроль полученных данных
+        if (!in_array(gettype($result), array('array','string','integer','double','NULL'))){
+            throw new Exception('Controller '.$calss.'.'.$method.'() returned an invalid data format: '.gettype($result).
+                'Expected format data: array, string, number or null');
+        }
+
+        //Записываем результаты в кеш
+        if ($cache_id) {
+            File::create($cache_path, $cache_id . '.simdata', Procedure::json($result));
+        }
+
+        return $result;
+    }
+}
+
+
 /**
  * Class Execute_resource
  * @package Sim
@@ -4192,119 +4282,121 @@ class Execute_resource extends Code{
     }
 
     public static function get($resource='', $params = array(), $revert_vars = false, $cache_time=0, $cache_path=''){
-        $result = NULL;
-        $cache = false;
+        $resource = (string) $resource;
+        $params = (array) $params;
+        $revert_vars = (boolean) $revert_vars;
+        $cache_time = (integer) $cache_time;
+        $cache_path = (string) $cache_path;
         $cache_id = false;
-        $cache_time = intval($cache_time);
+        $result = null;
 
-        if (empty($resource)) return NULL;
-        if (gettype($params) != 'array') return NULL;
-        if (empty($cache_path)) $cache_time = 0;
-
-        if ($cache_time > 0) {
-            $cache_id = sha1($resource.serialize($params).(($revert_vars) ? '_vars' : '')).Environment::version;
-            $cache = File::exists($cache_path . $cache_id . '.simdata');
+        if (empty($resource)) {
+            return null;
         }
 
-        if (!$cache or !$cache_id or ($cache->time(true) > $cache_time)){
-            //Проверяем источник рессурса (удаленный/локальный)
-            //Если источник удаленный
-            if (preg_match('/^(?:http|https):\/\//',$resource)){
+        if ($cache_time > 0) {
+            $cache_id = sha1($resource.Procedure::json($params).(($revert_vars) ? '_vars' : '')).Environment::version;
+            $cache = File::exists($cache_path . $cache_id . '.simdata');
 
-                if ($curl = curl_init()) {
-                    try {
-                        curl_setopt($curl, CURLOPT_URL, $resource);
-                        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-                        if (!empty($params)){
-                            curl_setopt($curl, CURLOPT_POST, true);
-                            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
-                        }
-                        $result = curl_exec($curl);
-                        curl_close($curl);
-
-                        //Если выполняется экспорт переменных, то пробуем декодировть JSON.
-                        if ($revert_vars){
-                            $result = json_decode($result, true);
-                        }
-                    } catch (\Exception $e) {
-                        return NULL;
-                    }
-
-                } else {
-                    return NULL;
-                }
-
-                //Если источник локальный
-            } else {
-
+            if ($cache and $cache->time(true) > $cache_time){
+                //Восстанавливаем данные из кеша
+                $result = $cache->content();
                 //Если выполняется экспорт переменных
                 if ($revert_vars) {
-
-                    $result = function ($resource, $simParams){
-
-                        $parent_buffer = ob_get_contents();
-                        ob_end_clean();
-
-                        try {
-                            ob_start();
-                            include $resource;
-                            unset ($resource, $simParams);
-                            $vars = get_defined_vars();
-                            unset($vars['parent_buffer']);
-                            ob_end_clean();
-                        } catch (\Exception $e) {
-                            $vars = NULL;
-                        }
-
-                        ob_start();
-                        echo $parent_buffer;
-
-                        return $vars;
-                    };
-                } else {
-
-                    $result = function($resource, $simParams){
-
-                        $parent_buffer = ob_get_contents();
-                        ob_end_clean();
-
-                        try{
-                            ob_start();
-                            include $resource;
-                            unset ($resource, $simParams);
-                            $content = ob_get_contents();
-                            ob_end_clean();
-                        } catch (\Exception $e) {
-                            $content = NULL;
-                        }
-
-                        ob_start();
-                        echo $parent_buffer;
-
-                        return $content;
-                    };
+                    $result = Procedure::jsonDecode($result);
                 }
-                $result = $result($resource, $params);
+                return $result;
             }
+        }
 
-            //Записываем результаты в кеш
-            if ($cache_time>0 and !empty($result)) {
-                File::create($cache_path, $cache_id . '.simdata', ($revert_vars) ? serialize($result) : $result);
-            }
+        //Определение типа источника (удаленный/локальный)
+        if (preg_match('/^(?:http|https):\/\//',$resource)){
+
+            //Удаленный источник
+
+            if ($curl = curl_init()) {
+                try {
+                    curl_setopt($curl, CURLOPT_URL, $resource);
+                    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                    if (!empty($params)){
+                        curl_setopt($curl, CURLOPT_POST, true);
+                        curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
+                    }
+                    $result = curl_exec($curl);
+                    curl_close($curl);
+                    //Декодирование JSON при экспорте переменных
+                    if ($revert_vars){
+                        $result = json_decode($result, true);
+                    }
+                } catch (\Exception $e) {
+                    throw (new Exception('Error while executing a request to a resource: '.$resource))
+                        ->set('Details: ', $e->getMessage());
+                }
+            } else return null;
 
         } else {
 
-            //Восстанавливаем данные из кеша
-            $result = $cache->content();
+            //Локальный источник
 
-            //Если выполняется экспорт переменных
             if ($revert_vars) {
-                $result = unserialize($result);
+
+                //Функция экспорта переменных
+                $result = function ($resource, $simParams){
+                    $parent_buffer = ob_get_contents();
+                    ob_end_clean();
+                    try {
+                        ob_start();
+                        include $resource;
+                        unset ($resource, $simParams);
+                        $vars = get_defined_vars();
+                        unset($vars['parent_buffer']);
+                        ob_end_clean();
+                    } catch (\Exception $e) {
+                        $vars = null;
+                    }
+                    ob_start();
+                    echo $parent_buffer;
+                    return $vars;
+                };
+
+            } else {
+
+                //Функция экспорта контента
+                $result = function($resource, $simParams){
+                    $parent_buffer = ob_get_contents();
+                    ob_end_clean();
+                    try{
+                        ob_start();
+                        include $resource;
+                        unset ($resource, $simParams);
+                        $content = ob_get_contents();
+                        ob_end_clean();
+                    } catch (\Exception $e) {
+                        $content = null;
+                    }
+                    ob_start();
+                    echo $parent_buffer;
+                    return $content;
+                };
+
             }
 
+            //Экспорт
+            $result = $result($resource, $params);
         }
 
-        return (empty($result)) ? NULL : $result;
+        //Контроль полученных данных
+        if (!in_array(gettype($result), array('array','string','integer','double','NULL'))){
+            throw new Exception('Resource "'.$resource.'" returned an invalid data format: '.gettype($result).
+                'Expected format data: array, string, number or null');
+        }
+
+        //Запись результатов в кеш
+        if ($cache_id) {
+            File::create($cache_path, $cache_id . '.simdata', ($revert_vars) ? Procedure::json($result) : $result);
+        }
+
+        return $result;
     }
 }
 
@@ -4682,6 +4774,11 @@ class File {
  */
 class Procedure {
 
+    /**
+     * Возвращает корневую директорию
+     *
+     * @return string
+     */
     final static public function get_document_root(){
         $result = '';
 
@@ -4694,6 +4791,21 @@ class Procedure {
         }
 
         return $result;
+    }
+
+    /**
+     * Возвращает JSON-представление данных
+     *
+     * @param $value
+     * @return string
+     */
+    final static public function json($value){
+        return json_encode($value, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
+    }
+
+    final static public function jsonDecode($json){
+        $json = (string) $json;
+        return json_decode($json, true);
     }
 
     /**
@@ -4753,8 +4865,10 @@ class Procedure {
      */
     final public static function autoload($class) {
         $class = str_replace(__NAMESPACE__.'\\', '', $class);
-        $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Extension' . DIRECTORY_SEPARATOR . $class . '.php';
-        @include_once $path;
+        if (preg_match('/^Execute_|Filter_/', $class)){
+            $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Extension' . DIRECTORY_SEPARATOR . $class . '.php';
+            @include_once $path;
+        }
     }
 
     /**
