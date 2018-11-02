@@ -7,7 +7,5 @@ return [
     'RootPath' => implode(DIRECTORY_SEPARATOR, [$baseDir,'public','templates']),
     'Cache' => true,
     'CachePath' => implode(DIRECTORY_SEPARATOR, [$baseDir,'storage','sim','cache']),
-    'Debug' => false,
-    'DebugListing' => '',
-    ''
+    'Debug' => false
 ];
