@@ -18,7 +18,7 @@ Procedure::autoload_register();
  */
 class Environment {
 
-    const version = '3.0.2';
+    const version = '3.0.3';
 
     /**
      * @var bool переключатель сервисного режима для отладки
@@ -1296,7 +1296,7 @@ class Macro{
      * @param array $data
      * @return string
      */
-    public function execute(array $data=array()){
+    public function render(array $data=array()){
 
         //Создаем объект шаблонизатора
         $sim = new Environment($this->_configuration);
