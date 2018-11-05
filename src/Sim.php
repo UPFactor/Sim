@@ -4175,7 +4175,7 @@ class Execute_controller extends Code {
         //Получение компонентов контроллера
         $components = explode('@', $controller, 2);
         if (empty($components) or count($components) != 2){
-            die('incorrect');
+            throw new Exception("Syntax error in data-sim '$controller' ");
         }
 
         //Контроль наличия
