@@ -18,7 +18,7 @@ Procedure::autoload_register();
  */
 class Environment {
 
-    const version = '3.0.3';
+    const version = '3.0.4';
 
     /**
      * @var bool переключатель сервисного режима для отладки
@@ -337,7 +337,7 @@ class Environment {
      * @param string $template HTML код шаблона
      * @return string Шаблон с нормализованными ссылками
      */
-    protected function linksNormaliz($template){
+    public function linksNormaliz($template){
         if (empty($this->_root_url)) return $template;
         $template = preg_replace(array(
             '/(< *?link[^>]*href *?= *?[\"\'])((?!http)(?!ftp)(?!\/\/).*?)([\"\'][^<]*>)/is',
