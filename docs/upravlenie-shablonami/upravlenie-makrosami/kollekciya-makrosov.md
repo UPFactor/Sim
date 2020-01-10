@@ -1,6 +1,6 @@
 # Коллекция макросов
 
-### add
+## add
 
 Добавляет макрос в коллекцию.
 
@@ -27,9 +27,7 @@ $Sim->macros->add('error','<div>Error name</div>', array(
 ));
 ```
 
-####  <a id="headline-81"></a>
-
-### get
+## get
 
 Возвращает из коллекции объект макроса по имени/идентификатору.
 
@@ -48,9 +46,7 @@ $Sim->macros->add('nocontent','/home/public_html/templates/nocontent.html');
 $nocontent_macro = $Sim->macros->get('nocontent');
 ```
 
-####  <a id="headline-82"></a>
-
-### remove
+## remove
 
 Удаляет из коллекции объект макроса с заданным именем/идентификатором.
 
@@ -68,9 +64,7 @@ remove(string $name) Macros
 $Sim->macros->remove('nocontent');
 ```
 
-####  <a id="headline-83"></a>
-
-### getList
+## getList
 
 Возвращает массив объектов из коллекции макросов.
 
@@ -86,9 +80,7 @@ getList() array
 $Sim->macros->getList();
 ```
 
-####  <a id="headline-84"></a>
-
-### isEmpty
+## isEmpty
 
 Возвращает `true`, если коллекция макросов пуста, иначе `false`.
 
@@ -103,6 +95,4 @@ isEmpty() boolean
 ```php
 $Sim->macros->isEmpty();
 ```
-
-
 

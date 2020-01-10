@@ -2,7 +2,7 @@
 
 Для коллекции макросов, так же как и для базового класса шаблонизатора, есть возможность определить параметры обработки шаблона. Они будут применены по умолчанию для каждого элемента коллекции. Если параметры не указаны, то используются параметры шаблонизатора.
 
-### onDebug
+## onDebug
 
 Включает/отключает сервисный режим для отладки.
 
@@ -20,9 +20,7 @@ onDebug(boolean $debug)
 $Sim->onDebug(true);
 ```
 
-####  <a id="headline-65"></a>
-
-### getDebugStatus
+## getDebugStatus
 
 Возвращает текущее состояние \(включен/выключен\) сервисного режима отладки.
 
@@ -38,9 +36,7 @@ getDebugStatus() boolean
 $Sim->getDebugStatus();
 ```
 
-####  <a id="headline-66"></a>
-
-### resetCache
+## resetCache
 
 Удаляет все файлы кеша из соответствующей директории. Директория файла кеша задается настройками шаблонизатора `setCachePath`.
 
@@ -62,9 +58,7 @@ resetCache(string $cache_path)
 $Sim->resetCache('/cache/');
 ```
 
-####  <a id="headline-67"></a>
-
-### setRootURL
+## setRootURL
 
 Задает корень для создания абсолютных ссылок внутри шаблона. Используется для преобразование всех ссылок внутри шаблона по принципу:
 
@@ -86,9 +80,7 @@ setRootURL(string $url)
 $Sim->setRootURL('/templates/');
 ```
 
-####  <a id="headline-68"></a>
-
-### getRootURL
+## getRootURL
 
 Возвращает корень для создания абсолютных ссылок внутри шаблона.
 
@@ -104,9 +96,7 @@ getRootURL() string
 $RootURL = $Sim->getRootURL();
 ```
 
-####  <a id="headline-69"></a>
-
-### setRootPath
+## setRootPath
 
 Устанавливает путь до корневой директории с шаблонами. Если указан данные параметр то путь к шаблону необходимо задавать относительно него.
 
@@ -124,9 +114,7 @@ setRootPath(string $path)
 $Sim->setRootPath('/home/public_html/templates/');
 ```
 
-####  <a id="headline-70"></a>
-
-### getRootPath
+## getRootPath
 
 Возвращает путь до корневой директории с шаблонами.
 
@@ -142,9 +130,7 @@ getRootPath() string
 $RootPath = $Sim->getRootPath();
 ```
 
-####  <a id="headline-71"></a>
-
-### setCachePath
+## setCachePath
 
 Устанавливает путь до директории хранения кеш-файлов.
 
@@ -162,9 +148,7 @@ setCachePath(string $path)
 $Sim->setCachePath('/home/public_html/cache/');
 ```
 
-####  <a id="headline-72"></a>
-
-### getCachePath
+## getCachePath
 
 Возвращает путь до директории хранения кеш-файлов.
 
@@ -180,9 +164,7 @@ getCachePath() string
 $CachePath = $Sim->getCachePath();
 ```
 
-####  <a id="headline-73"></a>
-
-### setConfiguration
+## setConfiguration
 
 Установка всех параметров шаблонизации
 
@@ -208,9 +190,7 @@ $Sim->setConfiguration(array(
 ));
 ```
 
-####  <a id="headline-74"></a>
-
-### getConfiguration
+## getConfiguration
 
 Возвращает массив параметров шаблонизации.
 

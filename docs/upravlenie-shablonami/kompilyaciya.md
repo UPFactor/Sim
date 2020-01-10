@@ -1,6 +1,6 @@
 # Компиляция
 
-### execute
+## execute
 
 Выполняет компиляцию и рендеринг шаблона с учетом установленных настроек шаблонизатора.
 
@@ -22,9 +22,7 @@ execute(string $template, array $data, boolean $revert) Sim|string
 $template = $Sim->execute('my_template_file.html', $data, true);
 ```
 
-####  <a id="headline-106"></a>
-
-### render
+## render
 
 Выполняет компиляцию и рендеринг шаблона с учетом установленных настроек шаблонизатора. Упрощенная конструкция функции `execute`.
 
@@ -42,9 +40,7 @@ render(string $template) Sim
 $Sim->render('my_template_file.html');
 ```
 
-####  <a id="headline-107"></a>
-
-### compile
+## compile
 
 Выполняет компиляцию шаблона. Возвращает массив с результатами компиляции.
 

@@ -7,7 +7,7 @@
 ```php
 $Sim = new \SimTemplate\Sim();
 $Sim->macros->add('nocontent','nocontent.html');
-	$Sim->macros->get('nocontent')->setConfiguration(array(
+    $Sim->macros->get('nocontent')->setConfiguration(array(
      RootURL => '/templates_nocontent/',
      RootPath => '/home/public_html/templates_nocontent/',
      CachePath => '/home/public_html/cache/'

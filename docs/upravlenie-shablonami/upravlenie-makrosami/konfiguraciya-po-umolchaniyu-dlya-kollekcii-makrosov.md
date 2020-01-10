@@ -2,7 +2,7 @@
 
 Для коллекции макросов, так же как и для базового класса шаблонизатора, есть возможность определить параметры обработки шаблона. Они будут применены по умолчанию для каждого элемента коллекции. Если параметры не указаны, то используются параметры шаблонизатора.
 
-### onDebug
+## onDebug
 
 Включает/отключает сервисный режим для отладки.
 
@@ -22,9 +22,7 @@ onDebug(boolean $debug, boolean $reset)
 $Sim->macros->onDebug(true);
 ```
 
-####  <a id="headline-87"></a>
-
-### setDefaultRootURL
+## setDefaultRootURL
 
 Задает корень для создания абсолютных ссылок внутри шаблона. Используется для преобразование всех ссылок внутри шаблона по принципу:
 
@@ -48,9 +46,7 @@ setDefaultRootURL(string $url, boolean $reset) Macros
 $Sim->macros->setDefaultRootURL('/templates/');
 ```
 
-####  <a id="headline-88"></a>
-
-### getDefaultRootURL
+## getDefaultRootURL
 
 Возвращает корень для создания абсолютных ссылок внутри.
 
@@ -66,9 +62,7 @@ getDefaultRootURL() string
 $RootURL = $Sim->macros->getDefaultRootURL();
 ```
 
-####  <a id="headline-89"></a>
-
-### setDefaultRootPath
+## setDefaultRootPath
 
 Устанавливает путь до корневой директории с шаблонами. Если указан данные параметр то путь к шаблону необходимо задавать относительно него.
 
@@ -88,9 +82,7 @@ setDefaultRootPath(string $path, boolean $reset) Macros
 $Sim->macros->setDefaultRootPath('/home/public_html/templates/');
 ```
 
-####  <a id="headline-90"></a>
-
-### getDefaultRootPath
+## getDefaultRootPath
 
 Возвращает путь до корневой директории с шаблонами.
 
@@ -106,9 +98,7 @@ getDefaultRootPath() string
 $RootPath = $Sim->macros->getDefaultRootPath();
 ```
 
-####  <a id="headline-91"></a>
-
-### setDefaultCachePath
+## setDefaultCachePath
 
 Устанавливает путь до директории хранения кеш-файлов
 
@@ -128,9 +118,7 @@ setDefaultCachePath(string $path, boolean $reset) Macros
 $Sim->macros->setDefaultCachePath('/home/public_html/cache/');
 ```
 
-####  <a id="headline-92"></a>
-
-### getDefaultCachePath
+## getDefaultCachePath
 
 Возвращает путь до директории хранения кеш-файлов.
 
@@ -146,9 +134,7 @@ getDefaultCachePath() string
 $CachePath = $Sim->macros->getDefaultCachePath();
 ```
 
-####  <a id="headline-93"></a>
-
-### setDefaultConfiguration
+## setDefaultConfiguration
 
 Установка всех параметров шаблонизации.
 
@@ -176,9 +162,7 @@ $Sim->macros->setDefaultConfiguration(array(
 ));
 ```
 
-####  <a id="headline-94"></a>
-
-### getDefaultConfiguration
+## getDefaultConfiguration
 
 Возвращает массив параметров шаблонизации.
 
@@ -193,6 +177,4 @@ getDefaultConfiguration() string
 ```php
 $Configuration = $Sim->macros->getDefaultConfiguration();
 ```
-
-
 

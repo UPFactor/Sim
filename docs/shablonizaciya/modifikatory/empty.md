@@ -2,7 +2,7 @@
 
 Проверяет переменную на пустоту. Вернет `true`, если переменная пустая и `false`если переменная не пустая
 
-### **Синтаксис**
+## **Синтаксис**
 
 ```text
 boolean $var:empty;
@@ -10,7 +10,7 @@ boolean $var:empty;
 
 \*\*\*\*
 
-### **Пример использования**
+## **Пример использования**
 
 Входные данные:
 
@@ -34,7 +34,7 @@ Array
 <div data-sim="if($data.users:empty ? content('User not found'));">
      <p data-sim="repeat($data.users as $user); content($user.item);"> ... </p>
 </div>
-    
+
 <h2>Модераторы</h2>
 <div data-sim="if($data.moderators:empty ? content('User not found'));">
      <p data-sim="
@@ -54,7 +54,7 @@ Array
     <p>William</p>
     <p>Daniel</p>    
 </div>
-    
+
 <h2>Модераторы</h2>
 <div>User not found</div>​
 ```

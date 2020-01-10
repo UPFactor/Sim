@@ -2,7 +2,7 @@
 
 Выполняет сортировку массива по возрастанию или убыванию.
 
-### **Синтаксис**
+## **Синтаксис**
 
 ```text
 array $var:sort{direction};
@@ -16,7 +16,7 @@ array $var:sort{direction};
 
 \*\*\*\*
 
-### **Пример использования**
+## **Пример использования**
 
 Входные данные:
 
@@ -38,7 +38,7 @@ Array
 <ul data-sim="foreach($data.users:sort{ask} as $user);">
     <li data-sim="content($user.item)"></li>
 </ul>
-   
+
 <ul data-sim="foreach($data.users:sort{desc} as $user);">
     <li data-sim="content($user.item)"></li>
 </ul>
@@ -52,7 +52,7 @@ Array
     <li>Daniel</li>
     <li>William</li>
 </ul>
-    
+
 <ul>
     <li>William</li>
     <li>Daniel</li>

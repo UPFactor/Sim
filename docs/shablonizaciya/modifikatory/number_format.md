@@ -2,7 +2,7 @@
 
 Форматирует число с разделением групп
 
-### **Синтаксис**
+## **Синтаксис**
 
 ```text
 float $var:number_format{integer $precision | string $decimal | string $thousands};
@@ -16,9 +16,7 @@ float $var:number_format{integer $precision | string $decimal | string $thousand
 
 `$thousands` — разделитель тысяч \(по умолчанию пробел « »\)
 
-
-
-### **Пример использования**
+## **Пример использования**
 
 Входные данные:
 
