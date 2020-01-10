@@ -1,2 +1,0 @@
-# upravlenie-shablonami
-
